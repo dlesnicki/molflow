@@ -21,6 +21,7 @@ program analysis
   !GENERAL PARAMETERS
   character(len=400) :: directory
   character(len=200) :: filename
+  character(len=200) :: title
   integer :: trajunit
   type(atom),dimension(:), allocatable :: atoms
   integer :: natoms
@@ -60,8 +61,8 @@ program analysis
 
   !TYPES
   type(gofr_type),dimension(:,:),allocatable :: gofr
-  type(msd_type) :: msdAr
-  type(G_type) :: GAr
+  type(msd_type), dimension(:),  allocatable :: msd
+  type(G_type), dimension(:,:),  allocatable :: G
 
   integer :: Nmolecule
 
@@ -71,11 +72,11 @@ program analysis
 
   namelist /data/ directory,filename,nskips,nprint,referential
   namelist /rdf/ limit,dr
-  namelist /msd/ nbins,dt
+  namelist /msd_info/ nbins,dt
   
   read(5,data)
   read(5,rdf)
-  read(5,msd)
+  read(5,msd_info)
 
 
   write(*,*) "---------------------"
@@ -135,10 +136,10 @@ program analysis
   do iatm=1,4
      do iatm2=iatm,4
         call create_gofr(gofr(iatm,iatm2),limit=limit,dr=dr)
+        call create_G(G(iatm,iatm2),nbins,limit,dr)
      enddo
+     call create_msd(msd(iatm),nbins=nbins,dt=dt)
   enddo
-  call create_msd(msdAr,nbins=nbins,dt=dt)
-  call create_G(GAr,nbins,limit,dr)
 
 
 !                  %----------------%
@@ -246,21 +247,18 @@ com_box = 0.0
 !                  |  UPDATE TOOLS  |
 !                  %----------------%
 
-        !WRITE(*,*)'UPDATE GOFR'
         do iatm=1,4
            do iatm2=iatm,4
               call update_gofr(gofr(iatm,iatm2),atoms,com,selection_carb(iatm,:),&
                             selection_carb(iatm2,:),box)
+              call update_G(G(iatm,iatm2),natoms,reference,com,&
+                      vcm,selection_carb(iatm,:),selection_carb(iatm2,:),box,usepbc,&
+                      referential)        
            enddo
+           call update_msd(msd(iatm),atoms,traj_pos,bin,nbins,selection_carb(iatm,:))
         enddo
 
-        !WRITE(*,*)'UPDATE MSD'
-        call update_msd(msdAr,atoms,traj_pos,bin,nbins,selectionT)
 
-        WRITE(*,*)'UPDATE G'
-        call update_G(GAr,natoms,reference,com,&
-                      vcm,selectionT,selectionT,box,usepbc,&
-                      referential)        
 
         traj_pos(:,:,bin)=com
      end if
@@ -280,35 +278,29 @@ com_box = 0.0
   do iatm=1,4
      do iatm2=iatm,4
         call finalize_gofr(gofr(iatm,iatm2),box)
+        call finalize_G(G(iatm,iatm2),box)
      enddo
+     call finalize_msd(msd(iatm))
   enddo
-  call finalize_msd(msdAr)
-  call finalize_G(GAr,box)
 
 !                  %------------------%
 !                  | DUMP OUT OUTPUTS |
 !                  %------------------%
 
-  !Radial distribution function
   do iatm=1,4
      do iatm2=iatm,4
-        open(unit=13,file="gofr-"//trim(list_labels(iatm))//"-"//trim(list_labels(iatm2))//".dat")
-           call write_gofr(13,gofr(iatm,iatm2),trim(list_labels(iatm))//"-"//trim(list_labels(iatm2)))
+        title=trim(list_labels(iatm))//"-"//trim(list_labels(iatm2))
+        open(unit=13,file="gofr-"//trim(title)//".dat")
+           call write_gofr(13,gofr(iatm,iatm2),trim(title))
         close(13)
+        open(15,file="G-"//trim(title)//".dat")
+           call write_G(15,G(iatm,iatm2),trim(title))
+        close(15)
      enddo
+     open(unit=14,file="msd-"//trim(list_labels(iatm))//".dat")
+        call write_msd(14,msd(iatm),trim(list_labels(iatm)))
+     close(14)
   enddo
-  !Mean square displacement
-  open(unit=14,file="msd.dat")
-  call write_msd(14,msdAr,"Ar-Ar")
-  close(14)
-  !G barbar
-  open(15,file="GAr.dat")
-     call write_G(15,GAr,"Ar")
-  close(15)
-  !Density Map
-  !call density_map_xy(GAr,Lx,Ly)
-  !!Rot,Div,V_r,V_theta
-  !call analysis_tools(GAr,Lx,Ly)
 
 CONTAINS
 
