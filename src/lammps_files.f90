@@ -159,23 +159,24 @@ contains
       
   end subroutine read_lammps_atoms
 
-  subroutine read_lammps(file,configuration,velocities,type,iostat)
+  subroutine read_lammps(file,configuration,velocities,type,symbol,iostat)
     type(lammpsfile), intent(in) :: file
     integer, intent(out) :: iostat
     real(kind=dp), dimension(:,:) :: configuration
     real(kind=dp), dimension(:,:) :: velocities
     integer, dimension(:) :: type 
+    character(len=2),dimension(:) :: symbol
 
     character(len=500) :: line
     character(len=200) :: line1,line2,line3,line4
     character(len=200) :: line5,line6,line7,line8,line9
-    character(len=2) :: symbol
     real(kind=dp), dimension(3) :: vector_pos,vector_vel
     real(kind=dp), dimension(3) :: vector_frc
     real(kind=dp) :: q
     integer :: id_at,id_mol,id_type 
     integer :: iat,natoms,unit
     real(kind=dp) :: mass
+    character(len=2) :: symbol_at
 
     unit=file%unit
     natoms=file%natoms
@@ -196,11 +197,11 @@ contains
        read(unit,fmt='(a)',iostat=iostat) line
 
        if (iostat.eq.0) then
-          read(line,*) id_at,id_mol,id_type,symbol,vector_pos(:),vector_vel(:),vector_frc(:)
-
+          read(line,*) id_at,id_mol,id_type,symbol_at,vector_pos(:),vector_vel(:),vector_frc(:)
           configuration(:,iat)=vector_pos
           velocities(:,iat)=vector_vel
           type(iat)=id_type
+          symbol(iat)=symbol_at
        end if
 
     end do
