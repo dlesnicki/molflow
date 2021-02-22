@@ -197,7 +197,7 @@ contains
        read(unit,fmt='(a)',iostat=iostat) line
 
        if (iostat.eq.0) then
-          read(line,*) id_at,id_mol,id_type,symbol_at,vector_pos(:),vector_vel(:),vector_frc(:)
+          read(line,*) id_at,id_type,symbol_at,vector_pos(:),vector_vel(:),vector_frc(:)
           configuration(:,iat)=vector_pos
           velocities(:,iat)=vector_vel
           type(iat)=id_type
