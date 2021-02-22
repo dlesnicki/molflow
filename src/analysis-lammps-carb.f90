@@ -45,6 +45,8 @@ program analysis
   real(kind=dp), dimension(:,:), allocatable :: vcm
   real(kind=dp) :: box_mass, mol_mass
 
+  character(len=2), dimension(4) :: list_labels
+
   !BOX PARAMETERS
   real(kind=dp) :: Lx,Ly,Lz
   type(box_type) :: box
@@ -164,6 +166,7 @@ program analysis
         configuration_old=configuration
 
         !Assign mass of particles
+        list_labels = [Character(len=2) :: 'C','Li','Na','K']
         imol = 0
         do iatm=1,natoms
            SELECT CASE(symbol(iatm))
@@ -179,12 +182,12 @@ program analysis
                    imol = imol + 1
                    at_mol(imol)=1
                    selection_carb(2,imol)=.true.
-           CASE('K')
+           CASE('Na')
                    mass(iatm) = 39
                    imol = imol + 1
                    at_mol(imol)=1
                    selection_carb(3,imol)=.true.
-           CASE('Na') 
+           CASE('K') 
                    mass(iatm) = 22
                    imol = imol + 1
                    at_mol(imol)=1
@@ -192,6 +195,11 @@ program analysis
            END SELECT
         end do
 
+        !Check number of atoms
+        do iatm=1,4
+           write(*,*) "There is", count(selection_carb(iatm,:)), "atom of type", list_labels(iatm)
+        enddo
+        
         !Center of mass of the box
         box_mass = 0.0  
         do iatm=1,natoms 
