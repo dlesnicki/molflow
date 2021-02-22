@@ -37,7 +37,7 @@ program analysis
   logical :: usepbc=.true.  
   logical :: referential ! if T then particle frame otherwise lab frame
   integer, dimension(:), allocatable :: id_type
-  integer :: bin,step,nsteps,skip,nskips,nprint,iatm,imol
+  integer :: bin,step,nsteps,skip,nskips,nprint,iatm,iatm2, imol
   integer :: iostat
   type(lammpsfile) :: trajfile_lammps
   integer :: i,j
@@ -57,7 +57,7 @@ program analysis
   integer :: nbins,timestep
 
   !TYPES
-  type(gofr_type) :: gofrAr
+  type(gofr_type),dimension(:,:),allocatable :: gofr
   type(msd_type) :: msdAr
   type(G_type) :: GAr
 
@@ -123,12 +123,18 @@ program analysis
   allocate(traj_pos(3,Nmolecule,nbins))
   allocate(at_mol(Nmolecule))
 
+  allocate(gofr(4,4))
+
 !                  %----------------%
 !                  |  CREATE TOOLS  |
 !                  %----------------%
 
   selectionT= .false.
-  call create_gofr(gofrAr,limit=limit,dr=dr)
+  do iatm=1,4
+     do iatm2=iatm,4
+        call create_gofr(gofr(iatm,iatm2),limit=limit,dr=dr)
+     enddo
+  enddo
   call create_msd(msdAr,nbins=nbins,dt=dt)
   call create_G(GAr,nbins,limit,dr)
 
@@ -233,17 +239,17 @@ com_box = 0.0
 
         !WRITE(*,*)'UPDATE GOFR'
         do iatm=1,4
-           do iatm2=iatm+1,4
-              call update_gofr(gofr(iatm,iatm2,:),natoms,com,selectionT,&
+           do iatm2=iatm,4
+              call update_gofr(gofr(iatm,iatm2),atoms,com,selectionT,&
                             selectionT,box)
            enddo
         enddo
 
         !WRITE(*,*)'UPDATE MSD'
-        call update_msd(msdAr,natoms,traj_pos,bin,nbins,selectionT)
+        call update_msd(msdAr,atoms,traj_pos,bin,nbins,selectionT)
 
         WRITE(*,*)'UPDATE G'
-        call update_G(GAr,atoms,reference,com,&
+        call update_G(GAr,natoms,reference,com,&
                       vcm,selectionT,selectionT,box,usepbc,&
                       referential)        
 
@@ -262,7 +268,11 @@ com_box = 0.0
 !                  | FINALIZE TOOLS |
 !                  %----------------%
 
-  call finalize_gofr(gofrAr,box)
+  do iatm=1,4
+     do iatm2=iatm,4
+        call finalize_gofr(gofr(iatm,iatm2),box)
+     enddo
+  enddo
   call finalize_msd(msdAr)
   call finalize_G(GAr,box)
 
@@ -271,9 +281,13 @@ com_box = 0.0
 !                  %------------------%
 
   !Radial distribution function
-  open(unit=13,file="gofr.dat")
-  call write_gofr(13,gofrAr,"Ar-Ar")
-  close(13)
+  do iatm=1,4
+     do iatm2=iatm,4
+        open(unit=13,file="gofr.dat")
+        call write_gofr(13,gofr(iatm,iatm2),"Ar-Ar")
+        close(13)
+     enddo
+  enddo
   !Mean square displacement
   open(unit=14,file="msd.dat")
   call write_msd(14,msdAr,"Ar-Ar")
