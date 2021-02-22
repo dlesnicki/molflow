@@ -47,6 +47,7 @@ program analysis
   real(kind=dp) :: box_mass, mol_mass
 
   character(len=2), dimension(4) :: list_labels
+  integer, dimension(4) :: count_labels
 
   !BOX PARAMETERS
   real(kind=dp) :: Lx,Ly,Lz
@@ -127,6 +128,8 @@ program analysis
   allocate(at_mol(Nmolecule))
 
   allocate(gofr(4,4))
+  allocate(G(4,4))
+  allocate(msd(4))
 
 !                  %----------------%
 !                  |  CREATE TOOLS  |
@@ -199,6 +202,7 @@ program analysis
         !Check number of atoms
         do iatm=1,4
            write(*,*) "There is", count(selection_carb(iatm,:)), "atom of type", list_labels(iatm)
+           count_labels(iatm)=count(selection_carb(iatm,:))
         enddo
         endif
         
@@ -288,7 +292,9 @@ com_box = 0.0
 !                  %------------------%
 
   do iatm=1,4
+     if (count_labels(iatm).ne.0) then
      do iatm2=iatm,4
+        if (count_labels(iatm2).ne.0) then
         title=trim(list_labels(iatm))//"-"//trim(list_labels(iatm2))
         open(unit=13,file="gofr-"//trim(title)//".dat")
            call write_gofr(13,gofr(iatm,iatm2),trim(title))
@@ -296,10 +302,12 @@ com_box = 0.0
         open(15,file="G-"//trim(title)//".dat")
            call write_G(15,G(iatm,iatm2),trim(title))
         close(15)
+        endif
      enddo
      open(unit=14,file="msd-"//trim(list_labels(iatm))//".dat")
         call write_msd(14,msd(iatm),trim(list_labels(iatm)))
      close(14)
+     endif
   enddo
 
 CONTAINS

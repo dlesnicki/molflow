@@ -188,7 +188,6 @@ contains
        '("# dr=",F14.6,",limit=",F14.6,", nsel1=",F14.6,", nsel2=",F14.6,&
             "V1=",F14.6)') &
        G%dr,G%limit,G%nsel1,G%nsel2,G%V1
-    write(*,*)G%V1
   
     do index=1,G%nG
         r=(dble(index)-0.5_dp)*G%dr
