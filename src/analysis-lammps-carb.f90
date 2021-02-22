@@ -152,7 +152,6 @@ program analysis
 !                  %----------------%
 !                  |  READ LAMMPS   |
 !                  %----------------%
-
          
      do skip=1,nskips
         call read_lammps(trajfile_lammps,configuration,velocities,id_type,symbol,iostat)
@@ -165,6 +164,7 @@ program analysis
         end if
         configuration_old=configuration
 
+        if (step.eq.0) then
         !Assign mass of particles
         list_labels = [Character(len=2) :: 'C','Li','Na','K']
         imol = 0
@@ -199,6 +199,7 @@ program analysis
         do iatm=1,4
            write(*,*) "There is", count(selection_carb(iatm,:)), "atom of type", list_labels(iatm)
         enddo
+        endif
         
         !Center of mass of the box
         box_mass = 0.0  
@@ -291,8 +292,8 @@ com_box = 0.0
   !Radial distribution function
   do iatm=1,4
      do iatm2=iatm,4
-        open(unit=13,file="gofr.dat")
-        call write_gofr(13,gofr(iatm,iatm2),"Ar-Ar")
+        open(unit=13,file="gofr-"//trim(list_labels(iatm))//"-"//trim(list_labels(iatm2))//".dat")
+           call write_gofr(13,gofr(iatm,iatm2),trim(list_labels(iatm))//"-"//trim(list_labels(iatm2)))
         close(13)
      enddo
   enddo
