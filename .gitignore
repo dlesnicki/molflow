@@ -1,6 +1,4 @@
-	Makefile
-	asphericity/
-	bin/
-	gyration/
-	modules/
-	objects/
+Makefile
+job_makefile
+modules
+objects
