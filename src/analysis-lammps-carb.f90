@@ -249,8 +249,8 @@ com_box = 0.0
         !WRITE(*,*)'UPDATE GOFR'
         do iatm=1,4
            do iatm2=iatm,4
-              call update_gofr(gofr(iatm,iatm2),atoms,com,selectionT,&
-                            selectionT,box)
+              call update_gofr(gofr(iatm,iatm2),atoms,com,selection_carb(iatm,:),&
+                            selection_carb(iatm2,:),box)
            enddo
         enddo
 
