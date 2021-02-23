@@ -64,7 +64,7 @@ program analysis
 !                  |  READ INPUTS   |
 !                  %----------------%
 
-  namelist /data/ directory,filename,nbins,nskips,nprint,referential
+  namelist /data/ directory,filename,nskips,nprint,referential
   namelist /rdf/ limit,dr
   namelist /msd_info/ nbins, dt
   
@@ -78,10 +78,12 @@ program analysis
   write(*,*) "file positions =",trim(filename)
   write(*,*) "nskips =",nskips
   write(*,*) "nprint =",nprint
-  write(*,*) "nprint =",nbins
+  write(*,*) "RDF INPUT :"
   write(*,*) "limit =",limit
   write(*,*) "dr =",dr
   write(*,*) "referential =",referential
+  write(*,*) "MSD INPUT :"
+  write(*,*) "nbins =",nbins
   write(*,*) "---------------------"
 
   trajunit=10
@@ -195,7 +197,7 @@ program analysis
 
         traj(:,:,bin)=configuration(:,:)
      end if
-     if (mod(step,nprint)==0) write(*,*) step
+     if (mod(step,nprint)==0) write(*,*) "step is", step
   end do
 
   nsteps=step
@@ -208,6 +210,8 @@ program analysis
 !                 | FINALIZE TOOLS |
 !                 %----------------%
 
+  call finalize_gofr(gofr,box)
+  call finalize_msd(msd)
   call finalize_G(G,box)
 
  !                 %------------------%
