@@ -21,6 +21,7 @@ module lammps_files
      integer :: natoms=0
      integer :: timestep=0
      real(kind=dp) :: a,b,c
+     character(len=200) :: orga
      type(atom), dimension(:), pointer :: atomlist => NULL()
   end type lammpsfile
 
@@ -34,12 +35,13 @@ contains
 !>\param unit file unit of the lammps file
 ! ***********************************************
 
-  subroutine open_read_lammps(unit,filename,file,natoms,timestep,a,b,c,iostat)
+  subroutine open_read_lammps(unit,filename,file,natoms,timestep,a,b,c,orga,iostat)
     integer, intent(in) :: unit
     character(len=*), intent(in) :: filename
     integer, intent(inout) :: natoms
     integer, intent(inout) :: timestep
     real(kind=dp), intent(inout) :: a,b,c
+    character(len=200), intent(inout) :: orga
     type(lammpsfile), intent(out) :: file
     integer, intent(out),optional :: iostat
 
@@ -96,6 +98,7 @@ contains
     file%filename=trim(filename)
     file%natoms=natoms
     file%timestep=timestep
+    file%orga = orga
     nullify(file%atomlist)
 
   end subroutine open_read_lammps
@@ -197,7 +200,14 @@ contains
        read(unit,fmt='(a)',iostat=iostat) line
 
        if (iostat.eq.0) then
-          read(line,*) id_at,id_type,symbol_at,vector_pos(:),vector_vel(:),vector_frc(:)
+          SELECT CASE(file%orga)
+          CASE("carbonate")
+              read(line,*) id_at,id_mol,id_type,symbol_at,q,vector_pos(:),vector_vel(:)
+          CASE("lj")
+              read(line,*) id_at,id_type,symbol_at,vector_pos(:),vector_vel(:),vector_frc(:)
+          CASE DEFAULT
+              read(line,*) id_at,id_type,symbol_at,vector_pos(:),vector_vel(:),vector_frc(:)
+          END SELECT
           configuration(:,iat)=vector_pos
           velocities(:,iat)=vector_vel
           type(iat)=id_type
