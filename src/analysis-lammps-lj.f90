@@ -140,8 +140,9 @@ program analysis
  !                 %----------------%
  !                 |  READ LAMMPS   |
  !                 %----------------%
-
-     call read_lammps(trajfile_lammps,configuration,velocities,id_type,symbol,iostat)       
+         
+     do skip=1,nskips
+        call read_lammps(trajfile_lammps,configuration,velocities,id_type,symbol,iostat)       
 
      !#############################################################################
      !Unfold trajectory
@@ -171,7 +172,7 @@ program analysis
 
      !#############################################################################
 
-
+     enddo
      if (iostat.ne.0) exit
 
      step=step+1

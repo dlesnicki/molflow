@@ -82,13 +82,16 @@ program analysis
 
   write(*,*) "---------------------"
   write(*,*) "DATA INPUT :"
+  write(*,*) "file positions =",trim(filename)
   write(*,*) "nskips =",nskips
   write(*,*) "nprint =",nprint
+  write(*,*) "RDF INPUT :"
   write(*,*) "limit =",limit
   write(*,*) "dr =",dr
-  write(*,*) "nbins = ",nbins
   write(*,*) "dt =",dt
   write(*,*) "referential =",referential
+  write(*,*) "MSD INPUT :"
+  write(*,*) "nbins =",nbins
   write(*,*) "---------------------"
 
   trajunit=10
