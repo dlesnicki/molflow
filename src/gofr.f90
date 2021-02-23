@@ -64,7 +64,7 @@ contains
 
     dr=gofr%dr
 
-    natoms=size(atoms)
+    natoms=size(configuration(1,:))
     if (present(usepbc)) my_usepbc=usepbc
 
     do iat1=1,natoms
@@ -74,6 +74,14 @@ contains
                 vector=configuration(:,iat2)-configuration(:,iat1)
                 if (my_usepbc) vector=minimum_image(vector,box)
                 dist=distance(vector)
+                if (dist.lt.1) then
+                        print*, iat2, configuration(:,iat2)
+                        print*, iat1, configuration(:,iat1)
+                        print*, configuration(:,iat2)-configuration(:,iat1)
+                        print*, vector
+                        print*, dist
+                        stop
+                endif
                 index=floor(dist/dr)+1
                 if (index<=gofr%nrdf) then
                    gofr%rdf(index)=gofr%rdf(index)+1.0_dp

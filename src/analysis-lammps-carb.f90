@@ -221,7 +221,6 @@ program analysis
            box_mass   = box_mass + mass(iatm)
         end do
         com_box=com_box/(box_mass)
-com_box = 0.0
         do iatm=1,natoms
            configuration(:,iatm) = configuration(:,iatm) - com_box(:)
         end do
