@@ -29,7 +29,7 @@ program analysis
   logical :: usepbc=.true.  
   logical :: referential ! if T then particle frame otherwise lab frame
 
-  integer :: bin,step,nsteps,skip,nskips,nprint,iatm
+  integer :: bin,step,nsteps,skip,nskips,nprint,iatm, cyc
   integer :: timestep
   integer :: iostat
 
@@ -135,6 +135,7 @@ program analysis
 
 
   step=0
+  cyc =0
   do
   
  !                 %----------------%
@@ -143,6 +144,7 @@ program analysis
          
      do skip=1,nskips
         call read_lammps(trajfile_lammps,configuration,velocities,id_type,symbol,iostat)       
+        if (iostat.eq.0) cyc = cyc+1
 
      !#############################################################################
      !Unfold trajectory
@@ -198,12 +200,12 @@ program analysis
 
         traj(:,:,bin)=configuration(:,:)
      end if
-     if (mod(step,nprint)==0) write(*,*) "step is", step
+     if (mod(step,nprint)==0) write(*,*) "number of read step is", step, "and real step is", cyc
   end do
 
   nsteps=step
 
-  write(*,*) "nsteps =",nsteps
+  write(*,*) "nsteps =",nsteps, "and real nsteps is", cyc
 
   call close_read_lammps(trajfile_lammps)
 
