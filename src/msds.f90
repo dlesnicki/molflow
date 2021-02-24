@@ -50,7 +50,7 @@ contains
 
     real(kind=dp), dimension(3) :: vector
 
-    natoms=size(atoms)
+    natoms=size(selection)
     nbins=msd%nbins
 
     do dbin=0,nbins-1
