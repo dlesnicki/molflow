@@ -195,12 +195,12 @@ program analysis
                    at_mol(imol)=1
                    selection_carb(2,imol)=.true.
            CASE('Na')
-                   mass(iatm) = 39
+                   mass(iatm) = 22
                    imol = imol + 1
                    at_mol(imol)=1
                    selection_carb(3,imol)=.true.
            CASE('K') 
-                   mass(iatm) = 22
+                   mass(iatm) = 39
                    imol = imol + 1
                    at_mol(imol)=1
                    selection_carb(4,imol)=.true.
