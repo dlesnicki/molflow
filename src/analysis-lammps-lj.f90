@@ -54,6 +54,7 @@ program analysis
   !INPUT PARAMETERS
   real(kind=dp) :: limit,dr,dt
   integer :: nbins
+  character(len=200) :: orga
 
   !TYPES
   type(gofr_type) :: gofr
@@ -65,10 +66,12 @@ program analysis
 !                  %----------------%
 
   namelist /data/ directory,filename,nskips,nprint,referential
+  namelist /lammps/ orga
   namelist /rdf/ limit,dr
   namelist /msd_info/ nbins, dt
   
   read(5,data)
+  read(5,lammps)
   read(5,rdf)
   read(5,msd_info)
 
@@ -78,6 +81,8 @@ program analysis
   write(*,*) "file positions =",trim(filename)
   write(*,*) "nskips =",nskips
   write(*,*) "nprint =",nprint
+  write(*,*) "LAMMPS INPUT :"
+  write(*,*) "orga =",orga
   write(*,*) "RDF INPUT :"
   write(*,*) "limit =",limit
   write(*,*) "dr =",dr
@@ -87,7 +92,7 @@ program analysis
   write(*,*) "---------------------"
 
   trajunit=10
-  call open_read_lammps(trajunit,trim(directory)//trim(filename),trajfile_lammps,natoms,timestep,Lx,Ly,Lz,iostat)
+  call open_read_lammps(trajunit,trim(directory)//trim(filename),trajfile_lammps,natoms,timestep,Lx,Ly,Lz,orga,iostat)
 
   write(*,*) "natoms =",natoms
   write(*,*) "box =",Lx,Ly,Lz
