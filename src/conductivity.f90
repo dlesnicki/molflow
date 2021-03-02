@@ -1,5 +1,5 @@
 
-module msds
+module conductivity
 
   use kinds
   use periodic_table
@@ -8,7 +8,7 @@ module msds
 
   implicit none 
 
-  type msd_type
+  type conductivity_type
 
      real(kind=dp) :: tmax, dt
      integer :: nbins
@@ -16,31 +16,32 @@ module msds
      real(kind=dp) :: nsel
      integer :: nupdates=-1
 
-  end type msd_type
+  end type conductivity_type
 
 contains
 
-  subroutine create_msd(msd,nbins,dt)
-    type(msd_type), intent(out) :: msd
+  subroutine create_conductivity(conductivity,nbins,dt)
+    type(conductivity_type), intent(out) :: conductivity
     real(kind=dp), intent(in) :: dt
     integer, intent(in) :: nbins
 
-    msd%dt=dt
-    msd%nbins=nbins
+    conductivity%dt=dt
+    conductivity%nbins=nbins
     
-    msd%tmax=dble(nbins-1)*dt
+    conductivity%tmax=dble(nbins-1)*dt
 
-    msd%nsel=0.0_dp
-    msd%nupdates=0
+    conductivity%nsel=0.0_dp
+    conductivity%nupdates=0
 
-    allocate(msd%displacement(nbins))
-    msd%displacement=0.0_dp
+    allocate(conductivity%displacement(nbins))
+    conductivity%displacement=0.0_dp
 
-  end subroutine create_msd
+  end subroutine create_conductivity
 
-  subroutine update_msd(msd,atoms,trajectory,bin,ntraj,selection)
-    type(msd_type), intent(inout) :: msd
+  subroutine update_conductivity(conductivity,atoms,trajectory,charge,bin,ntraj,selection)
+    type(conductivity_type), intent(inout) :: conductivity
     type(atom), dimension(:), intent(in) :: atoms
+    real(kind=dp), dimension(:), intent(in) :: charge
     real(kind=dp), dimension(:,:,:), intent(in) :: trajectory
     integer, intent(in) :: bin,ntraj
     logical, dimension(:) :: selection
@@ -51,38 +52,36 @@ contains
     real(kind=dp), dimension(3) :: vector
 
     natoms=size(selection)
-    nbins=msd%nbins
+    nbins=conductivity%nbins
 
     do dbin=0,nbins-1
        bin2=mod(bin+dbin-1,ntraj)+1
-
+       vector = 0.0
        do iat=1,natoms
-          if (selection(iat)) then
-             vector=trajectory(:,iat,bin)-trajectory(:,iat,bin2)
-             msd%displacement(dbin+1)=msd%displacement(dbin+1)+&
-                  distance(vector)**2
-          end if
+             vector=vector+charge(iat)*(trajectory(:,iat,bin)-trajectory(:,iat,bin2))
        end do
+       conductivity%displacement(dbin+1)=conductivity%displacement(dbin+1)+&
+                  distance(vector)**2
 
     end do
 
-    msd%nupdates=msd%nupdates+1
-    msd%nsel=msd%nsel+dble(count_selection(selection))
+    conductivity%nupdates=conductivity%nupdates+1
+    conductivity%nsel=conductivity%nsel+dble(count_selection(selection))
 
-  end subroutine update_msd
+  end subroutine update_conductivity
 
-  subroutine finalize_msd(msd)
-    type(msd_type), intent(inout) :: msd
+  subroutine finalize_conductivity(conductivity)
+    type(conductivity_type), intent(inout) :: conductivity
 
-    msd%displacement=msd%displacement/msd%nsel
+    conductivity%displacement=conductivity%displacement/conductivity%nsel
 
-    msd%nsel=msd%nsel/dble(msd%nupdates)
+    conductivity%nsel=conductivity%nsel/dble(conductivity%nupdates)
 
-  end subroutine finalize_msd
+  end subroutine finalize_conductivity
 
-  subroutine write_msd(out_unit,msd,comment)
+  subroutine write_conductivity(out_unit,conductivity,comment)
     integer, intent(in) :: out_unit
-    type(msd_type), intent(in) :: msd
+    type(conductivity_type), intent(in) :: conductivity
     character(len=*), intent(in), optional :: comment
 
      integer :: index
@@ -91,14 +90,14 @@ contains
      if (present(comment)) write(out_unit,'("# ",A)') trim(comment)
      write(out_unit,&
        '("# dt=",F14.6,", tmax=",F14.6,", nsel=",F14.6)') &
-       msd%dt,msd%tmax,msd%nsel
+       conductivity%dt,conductivity%tmax,conductivity%nsel
      
-     do index=2,msd%nbins
-        t=dble(index-1)*msd%dt
-        write(out_unit,'(2F14.6)') t,msd%displacement(index)
+     do index=2,conductivity%nbins
+        t=dble(index-1)*conductivity%dt
+        write(out_unit,'(2F14.6)') t,conductivity%displacement(index)
      end do
 
 
-  end subroutine write_msd
+  end subroutine write_conductivity
 
-end module msds
+end module conductivity
