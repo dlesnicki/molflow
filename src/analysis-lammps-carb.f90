@@ -262,9 +262,9 @@ program analysis
            do iatm2=iatm,4
               call update_gofr(gofr(iatm,iatm2),atoms,com,selection_carb(iatm,:),&
                             selection_carb(iatm2,:),box)
-              call update_G(G(iatm,iatm2),natoms,reference,com,&
-                      vcm,selection_carb(iatm,:),selection_carb(iatm2,:),box,usepbc,&
-                      referential)        
+              !call update_G(G(iatm,iatm2),natoms,reference,com,&
+              !        vcm,selection_carb(iatm,:),selection_carb(iatm2,:),box,usepbc,&
+              !        referential)        
            enddo
            call update_msd(msd(iatm),atoms,traj_pos,bin,nbins,selection_carb(iatm,:))
         enddo
@@ -289,7 +289,7 @@ program analysis
   do iatm=1,4
      do iatm2=iatm,4
         call finalize_gofr(gofr(iatm,iatm2),box)
-        call finalize_G(G(iatm,iatm2),box)
+        !call finalize_G(G(iatm,iatm2),box)
      enddo
      call finalize_msd(msd(iatm))
   enddo
@@ -306,9 +306,9 @@ program analysis
         open(unit=13,file="gofr-"//trim(title)//".dat")
            call write_gofr(13,gofr(iatm,iatm2),trim(title))
         close(13)
-        open(15,file="G-"//trim(title)//".dat")
-           call write_G(15,G(iatm,iatm2),trim(title))
-        close(15)
+        !open(15,file="G-"//trim(title)//".dat")
+        !   call write_G(15,G(iatm,iatm2),trim(title))
+        !close(15)
         endif
      enddo
      open(unit=14,file="msd-"//trim(list_labels(iatm))//".dat")
