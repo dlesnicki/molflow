@@ -337,7 +337,7 @@ program analysis
      endif
   enddo
   open(unit=14,file="conductivity.dat")
-      call write_conductivity(14, conduct, "D")
+      call write_conductivity(14, conduct, Lx*Ly*Lz,"D")
   close(14)
 
 CONTAINS

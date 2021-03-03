@@ -77,9 +77,10 @@ contains
 
   end subroutine finalize_conductivity
 
-  subroutine write_conductivity(out_unit,conductivity,comment)
+  subroutine write_conductivity(out_unit,conductivity,volume,comment)
     integer, intent(in) :: out_unit
     type(conductivity_type), intent(in) :: conductivity
+    real(kind=dp), intent(in) :: volume
     character(len=*), intent(in), optional :: comment
 
      integer :: index
@@ -92,7 +93,7 @@ contains
      
      do index=2,conductivity%nbins
         t=dble(index-1)*conductivity%dt
-        write(out_unit,'(2F14.6)') t,conductivity%displacement(index)
+        write(out_unit,'(3F14.6)') t,conductivity%displacement(index), volume
      end do
 
 
