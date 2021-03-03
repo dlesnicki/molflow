@@ -185,7 +185,7 @@ program analysis
         end if
         configuration_old=configuration
 
-        if (step.eq.0) then
+        if ((step.eq.0).AND.(skip.eq.1)) then
         !Assign mass of particles
         list_labels = [Character(len=2) :: 'C','Li','Na','K']
         imol = 0
