@@ -162,11 +162,12 @@ contains
       
   end subroutine read_lammps_atoms
 
-  subroutine read_lammps(file,configuration,velocities,type,symbol,iostat)
+  subroutine read_lammps(file,configuration,velocities,charge,type,symbol,iostat)
     type(lammpsfile), intent(in) :: file
     integer, intent(out) :: iostat
     real(kind=dp), dimension(:,:) :: configuration
     real(kind=dp), dimension(:,:) :: velocities
+    real(kind=dp), dimension(:) :: charge
     integer, dimension(:) :: type 
     character(len=2),dimension(:) :: symbol
 
@@ -205,9 +206,11 @@ contains
               read(line,*) id_at,id_mol,id_type,symbol_at,q,vector_pos(:),vector_vel(:)
           CASE("lj")
               read(line,*) id_at,id_type,symbol_at,vector_pos(:),vector_vel(:),vector_frc(:)
+              q = 0
           CASE DEFAULT
               read(line,*) id_at,id_type,symbol_at,vector_pos(:),vector_vel(:),vector_frc(:)
           END SELECT
+          charge(iat)=q
           configuration(:,iat)=vector_pos
           velocities(:,iat)=vector_vel
           type(iat)=id_type

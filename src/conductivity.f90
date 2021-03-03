@@ -38,22 +38,20 @@ contains
 
   end subroutine create_conductivity
 
-  subroutine update_conductivity(conductivity,atoms,trajectory,charge,bin,ntraj,selection)
+  subroutine update_conductivity(conductivity,trajectory,charge,bin)
     type(conductivity_type), intent(inout) :: conductivity
-    type(atom), dimension(:), intent(in) :: atoms
     real(kind=dp), dimension(:), intent(in) :: charge
     real(kind=dp), dimension(:,:,:), intent(in) :: trajectory
-    integer, intent(in) :: bin,ntraj
-    logical, dimension(:) :: selection
+    integer, intent(in) :: bin
 
-    integer :: bin2,dbin,nbins
+    integer :: bin2,dbin,nbins,ntraj
     integer :: iat,natoms
 
     real(kind=dp), dimension(3) :: vector
 
-    natoms=size(selection)
+    natoms=size(trajectory(1,:,1))
     nbins=conductivity%nbins
-
+    ntraj=nbins
     do dbin=0,nbins-1
        bin2=mod(bin+dbin-1,ntraj)+1
        vector = 0.0
@@ -66,7 +64,7 @@ contains
     end do
 
     conductivity%nupdates=conductivity%nupdates+1
-    conductivity%nsel=conductivity%nsel+dble(count_selection(selection))
+    conductivity%nsel=conductivity%nsel+1
 
   end subroutine update_conductivity
 

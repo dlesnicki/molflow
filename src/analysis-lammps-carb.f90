@@ -7,6 +7,7 @@ program analysis
   use pbc
   use gofrs
   use msds
+  use conductivity
   use selections
   use colvar_utils
   use distribution
@@ -26,8 +27,9 @@ program analysis
   type(atom),dimension(:), allocatable :: atoms
   integer :: natoms
   real(kind=dp), dimension(:,:), allocatable :: configuration,configuration_old,reference
+  real(kind=dp), dimension(:),   allocatable  :: charge
   real(kind=dp), dimension(:,:), allocatable :: velocities
-  real(kind=dp), dimension(:,:,:), allocatable :: traj_pos
+  real(kind=dp), dimension(:,:,:), allocatable :: traj_com
   real(kind=dp), dimension(:), allocatable :: mass
   real(kind=dp), dimension(3) :: vector
   real(kind=dp), dimension(3) :: com_box
@@ -43,6 +45,7 @@ program analysis
   type(lammpsfile) :: trajfile_lammps
   integer :: i,j
   real(kind=dp), dimension(:,:), allocatable :: com
+  real(kind=dp), dimension(:), allocatable :: charge_com
   real(kind=dp), dimension(:,:), allocatable :: vcm
   real(kind=dp) :: box_mass, mol_mass
 
@@ -64,6 +67,7 @@ program analysis
   !TYPES
   type(gofr_type),dimension(:,:),allocatable :: gofr
   type(msd_type), dimension(:),  allocatable :: msd
+  type(conductivity_type)                    :: conduct
   type(G_type), dimension(:,:),  allocatable :: G
 
   integer :: Nmolecule
@@ -76,11 +80,13 @@ program analysis
   namelist /lammps/ orga
   namelist /rdf/ limit,dr
   namelist /msd_info/ nbins,dt
+ 
   
   read(5,data)
   read(5,lammps)
   read(5,rdf)
   read(5,msd_info)
+  !read(5,conductivity_info)
 
 
   write(*,*) "---------------------"
@@ -121,6 +127,7 @@ program analysis
 
   allocate(atoms(natoms))
   allocate(configuration(3,natoms))
+  allocate(charge(natoms))
   allocate(configuration_old(3,natoms))
   allocate(velocities(3,natoms))  
   
@@ -128,11 +135,12 @@ program analysis
   allocate(mass(natoms))
   allocate(symbol(natoms))
   allocate(com(3,Nmolecule))
+  allocate(charge_com(Nmolecule))
   allocate(reference(3,Nmolecule))
   allocate(selectionT(Nmolecule))
   allocate(selection_carb(4,Nmolecule))
   allocate(vcm(3,Nmolecule))
-  allocate(traj_pos(3,Nmolecule,nbins))
+  allocate(traj_com(3,Nmolecule,nbins))
   allocate(at_mol(Nmolecule))
 
   allocate(gofr(4,4))
@@ -151,6 +159,7 @@ program analysis
      enddo
      call create_msd(msd(iatm),nbins=nbins,dt=dt)
   enddo
+  call create_conductivity(conduct,nbins=nbins,dt=dt)
 
 
 !                  %----------------%
@@ -166,7 +175,7 @@ program analysis
 !                  %----------------%
          
      do skip=1,nskips
-        call read_lammps(trajfile_lammps,configuration,velocities,id_type,symbol,iostat)
+        call read_lammps(trajfile_lammps,configuration,velocities,charge,id_type,symbol,iostat)
         if (step.ne.0) then
            do iatm=1,natoms
               vector=configuration(:,iatm)-configuration_old(:,iatm)
@@ -235,6 +244,7 @@ program analysis
            do i=1,at_mol(iatm)
               j = j+1
               com(:,iatm) = com(:,iatm) + mass(j)*configuration(:,j)
+              charge_com(iatm) = charge_com(iatm) + charge(j)
               vcm(:,iatm) = vcm(:,iatm) + mass(j)*velocities(:,j)
               mol_mass = mol_mass + mass(j)
            end do
@@ -248,11 +258,11 @@ program analysis
      step=step+1
      if (step<=nbins) then
         bin=step
-        traj_pos(:,:,bin)=com
+        traj_com(:,:,bin)=com
      else
         
         bin=mod(step-1,nbins)+1
-        reference=traj_pos(:,:,bin)
+        reference=traj_com(:,:,bin)
 
 !                  %----------------%
 !                  |  UPDATE TOOLS  |
@@ -266,12 +276,13 @@ program analysis
               !        vcm,selection_carb(iatm,:),selection_carb(iatm2,:),box,usepbc,&
               !        referential)        
            enddo
-           call update_msd(msd(iatm),atoms,traj_pos,bin,nbins,selection_carb(iatm,:))
+           call update_msd(msd(iatm),atoms,traj_com,bin,nbins,selection_carb(iatm,:))
         enddo
+        call update_conductivity(conduct,traj_com,charge_com,bin)
 
 
 
-        traj_pos(:,:,bin)=com
+        traj_com(:,:,bin)=com
      end if
      if (mod(step,nprint)==0) write(*,*) "step = ",step
   end do
@@ -293,6 +304,7 @@ program analysis
      enddo
      call finalize_msd(msd(iatm))
   enddo
+  call finalize_conductivity(conduct)
 
 !                  %------------------%
 !                  | DUMP OUT OUTPUTS |
@@ -316,6 +328,9 @@ program analysis
      close(14)
      endif
   enddo
+  open(unit=14,file="conductivity.dat")
+      call write_conductivity(14, conduct, "D")
+  close(14)
 
 CONTAINS
 
