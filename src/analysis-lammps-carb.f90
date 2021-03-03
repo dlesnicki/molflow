@@ -229,14 +229,14 @@ program analysis
         do iatm=1,natoms 
            com_box(:) = com_box(:) + mass(iatm)*configuration(:,iatm)
            box_mass   = box_mass + mass(iatm)
-           box_charge   = box_charge + mass(iatm)
+           box_charge   = box_charge + charge(iatm)
         end do
         com_box=com_box/(box_mass)
         do iatm=1,natoms
            configuration(:,iatm) = configuration(:,iatm) - com_box(:)
         end do
 
-        if (box_charge.eq.0) then
+        if (box_charge.ne.0) then
                 write(*,*) "Total box charge is:", box_charge
                 stop
         endif
@@ -244,6 +244,7 @@ program analysis
         !Center of mass of each monomer
         com=0.0_dp
         vcm=0.0_dp
+        charge_com=0.0_dp
 
         j=0
         do iatm=1,Nmolecule
