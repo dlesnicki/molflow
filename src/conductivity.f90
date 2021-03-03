@@ -93,7 +93,7 @@ contains
      
      do index=2,conductivity%nbins
         t=dble(index-1)*conductivity%dt
-        write(out_unit,'(3F14.6)') t,conductivity%displacement(index), volume
+        write(out_unit,'(3E14.6)') t,conductivity%displacement(index), volume
      end do
 
 
