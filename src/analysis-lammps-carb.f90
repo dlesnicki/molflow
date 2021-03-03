@@ -47,7 +47,7 @@ program analysis
   real(kind=dp), dimension(:,:), allocatable :: com
   real(kind=dp), dimension(:), allocatable :: charge_com
   real(kind=dp), dimension(:,:), allocatable :: vcm
-  real(kind=dp) :: box_mass, mol_mass
+  real(kind=dp) :: box_mass, box_charge, mol_mass
 
   character(len=2), dimension(4) :: list_labels
   integer, dimension(4) :: count_labels
@@ -224,15 +224,22 @@ program analysis
         endif
         
         !Center of mass of the box
-        box_mass = 0.0  
+        box_mass = 0.0 
+        box_charge = 0.0 
         do iatm=1,natoms 
            com_box(:) = com_box(:) + mass(iatm)*configuration(:,iatm)
            box_mass   = box_mass + mass(iatm)
+           box_charge   = box_charge + mass(iatm)
         end do
         com_box=com_box/(box_mass)
         do iatm=1,natoms
            configuration(:,iatm) = configuration(:,iatm) - com_box(:)
         end do
+
+        if (box_charge.eq.0) then
+                write(*,*) "Total box charge is:", box_charge
+                stop
+        endif
 
         !Center of mass of each monomer
         com=0.0_dp
