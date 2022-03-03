@@ -36,6 +36,7 @@ program analysis
   integer, dimension(:), allocatable :: at_mol
   logical, dimension(:), allocatable :: selectionT
   logical, dimension(:,:), allocatable :: selection_carb
+  logical, dimension(:,:), allocatable :: selection_mol
   character(len=2), dimension(:), allocatable :: symbol
   logical :: usepbc=.true.  
   logical :: referential ! if T then particle frame otherwise lab frame
@@ -49,8 +50,10 @@ program analysis
   real(kind=dp), dimension(:,:), allocatable :: vcm
   real(kind=dp) :: box_mass, box_charge, mol_mass
 
-  character(len=2), dimension(4) :: list_labels
-  integer, dimension(4) :: count_labels
+  character(len=2), dimension(5) :: list_labels
+  character(len=2), dimension(4) :: list_labels_mol
+  integer, dimension(5) :: count_labels
+  integer, dimension(4) :: count_labels_mol
 
   !BOX PARAMETERS
   real(kind=dp) :: Lx,Ly,Lz
@@ -130,6 +133,8 @@ program analysis
   allocate(charge(natoms))
   allocate(configuration_old(3,natoms))
   allocate(velocities(3,natoms))  
+  allocate(selection_carb(5,natoms))
+  allocate(selection_mol(4,Nmolecule))
   
   allocate(id_type(natoms))
   allocate(mass(natoms))
@@ -138,13 +143,12 @@ program analysis
   allocate(charge_com(Nmolecule))
   allocate(reference(3,Nmolecule))
   allocate(selectionT(Nmolecule))
-  allocate(selection_carb(4,Nmolecule))
   allocate(vcm(3,Nmolecule))
   allocate(traj_com(3,Nmolecule,nbins))
   allocate(at_mol(Nmolecule))
 
-  allocate(gofr(4,4))
-  allocate(G(4,4))
+  allocate(gofr(5,5))
+  allocate(G(5,5))
   allocate(msd(4))
 
 !                  %----------------%
@@ -152,12 +156,14 @@ program analysis
 !                  %----------------%
 
   selectionT= .false.
-  do iatm=1,4
-     do iatm2=iatm,4
+  do iatm=1,5
+     do iatm2=iatm,5
         call create_gofr(gofr(iatm,iatm2),limit=limit,dr=dr)
         call create_G(G(iatm,iatm2),nbins,limit,dr)
      enddo
-     call create_msd(msd(iatm),nbins=nbins,dt=dt)
+  enddo
+  do imol=1,4
+     call create_msd(msd(imol),nbins=nbins,dt=dt)
   enddo
   call create_conductivity(conduct,nbins=nbins,dt=dt)
 
@@ -187,7 +193,8 @@ program analysis
 
         if ((step.eq.0).AND.(skip.eq.1)) then
         !Assign mass of particles
-        list_labels = [Character(len=2) :: 'C','Li','Na','K']
+        list_labels = [Character(len=2) :: 'C','O','Li','Na','K']
+        list_labels_mol = [Character(len=2) :: 'C','Li','Na','K']
         imol = 0
         do iatm=1,natoms
            SELECT CASE(symbol(iatm))
@@ -195,34 +202,42 @@ program analysis
                    mass(iatm) = 12
                    imol = imol + 1
                    at_mol(imol)=4
-                   selection_carb(1,imol)=.true.
+                   selection_carb(1,iatm)=.true.
+                   selection_mol(1,imol)=.true.
            CASE('O')
                    mass(iatm) = 15.999
+                   selection_carb(2,iatm)=.true.
            CASE('Li') 
                    mass(iatm) = 7
                    imol = imol + 1
                    at_mol(imol)=1
-                   selection_carb(2,imol)=.true.
+                   selection_carb(3,iatm)=.true.
+                   selection_mol(2,imol)=.true.
            CASE('Na')
                    mass(iatm) = 22
                    imol = imol + 1
                    at_mol(imol)=1
-                   selection_carb(3,imol)=.true.
+                   selection_carb(4,iatm)=.true.
+                   selection_mol(3,imol)=.true.
            CASE('K') 
                    mass(iatm) = 39
                    imol = imol + 1
                    at_mol(imol)=1
-                   selection_carb(4,imol)=.true.
+                   selection_carb(5,iatm)=.true.
+                   selection_mol(4,imol)=.true.
            END SELECT
         end do
 
         !Check number of atoms
-        do iatm=1,4
+        do iatm=1,5
            write(*,*) "There is", count(selection_carb(iatm,:)), "atom of type", list_labels(iatm)
            count_labels(iatm)=count(selection_carb(iatm,:))
         enddo
+        do imol=1,4
+           count_labels_mol(imol) = count(selection_mol(imol,:))
+        enddo
         endif
-        
+
         !Center of mass of the box
         box_mass = 0.0 
         box_charge = 0.0 
@@ -276,15 +291,17 @@ program analysis
 !                  |  UPDATE TOOLS  |
 !                  %----------------%
 
-        do iatm=1,4
-           do iatm2=iatm,4
-              call update_gofr(gofr(iatm,iatm2),atoms,com,selection_carb(iatm,:),&
+        do iatm=1,5
+           do iatm2=iatm,5
+              call update_gofr(gofr(iatm,iatm2),atoms,configuration,selection_carb(iatm,:),&
                             selection_carb(iatm2,:),box)
               !call update_G(G(iatm,iatm2),natoms,reference,com,&
               !        vcm,selection_carb(iatm,:),selection_carb(iatm2,:),box,usepbc,&
               !        referential)        
            enddo
-           call update_msd(msd(iatm),atoms,traj_com,bin,nbins,selection_carb(iatm,:))
+        enddo
+        do imol=1,4
+           call update_msd(msd(imol),atoms,traj_com,bin,nbins,selection_mol(imol,:))
         enddo
         call update_conductivity(conduct,traj_com,charge_com,bin)
 
@@ -300,17 +317,18 @@ program analysis
   write(*,*) "nsteps =",nsteps
 
   call close_read_lammps(trajfile_lammps)
-
 !                  %----------------%
 !                  | FINALIZE TOOLS |
 !                  %----------------%
 
-  do iatm=1,4
-     do iatm2=iatm,4
+  do iatm=1,5
+     do iatm2=iatm,5
         call finalize_gofr(gofr(iatm,iatm2),box)
         !call finalize_G(G(iatm,iatm2),box)
      enddo
-     call finalize_msd(msd(iatm))
+  enddo
+  do imol=1,4
+     call finalize_msd(msd(imol))
   enddo
   call finalize_conductivity(conduct)
 
@@ -318,9 +336,9 @@ program analysis
 !                  | DUMP OUT OUTPUTS |
 !                  %------------------%
 
-  do iatm=1,4
+  do iatm=1,5
      if (count_labels(iatm).ne.0) then
-     do iatm2=iatm,4
+     do iatm2=iatm,5
         if (count_labels(iatm2).ne.0) then
         title=trim(list_labels(iatm))//"-"//trim(list_labels(iatm2))
         open(unit=13,file="gofr-"//trim(title)//".dat")
@@ -331,9 +349,13 @@ program analysis
         !close(15)
         endif
      enddo
-     open(unit=14,file="msd-"//trim(list_labels(iatm))//".dat")
-        call write_msd(14,msd(iatm),trim(list_labels(iatm)))
-     close(14)
+     endif
+  enddo
+  do imol=1,4
+     if (count_labels_mol(imol).ne.0) then
+        open(unit=14,file="msd-"//trim(list_labels_mol(imol))//".dat")
+           call write_msd(14,msd(imol),trim(list_labels_mol(imol)))
+        close(14)
      endif
   enddo
   open(unit=14,file="conductivity.dat")
