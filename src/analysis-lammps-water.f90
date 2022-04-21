@@ -40,7 +40,7 @@ program analysis
   logical :: usepbc=.true.  
   logical :: referential_bool ! if T then particle frame otherwise lab frame
   integer, dimension(:), allocatable :: id_type
-  integer :: bin,step,nsteps,skip,nskips,nprint,iatm,iatm2
+  integer :: bin,step,nsteps,skip,nskips,nprint,iatm,iatm2, istep
   integer :: iostat
   type(lammpsfile) :: trajfile_lammps
   integer :: i,j
@@ -59,8 +59,9 @@ program analysis
   character(len=200) :: orga
 
   !INPUT PARAMETERS
-  real(kind=dp) :: limit,dr,dt, gap_time
-  integer :: nbins,timestep
+  real(kind=dp) :: limit_rdf, limit_flow,dr_rdf, dr_flow,dt_print
+  real(kind=dp) :: gap_time
+  integer :: igap_time
 
   !TYPES
   type(gofr_type),dimension(:,:),allocatable :: gofr
@@ -73,17 +74,17 @@ program analysis
 !                  |  READ INPUTS   |
 !                  %----------------%
 
-  namelist /data/ directory,filename,nskips,nprint,referential
+  namelist /data/ directory,filename,nskips, referential, dt_print, gap_time
   namelist /lammps/ orga
-  namelist /rdf/ limit,dr
-  namelist /msd_info/ nbins,dt
-  namelist /flow_info/ gap_time, dr
+  namelist /rdf/ limit_rdf, dr_rdf
+  namelist /flow_info/ dr_flow, referential, limit_flow
  
   
   read(5,data)
   read(5,lammps)
   read(5,rdf)
-  read(5,msd_info)
+  !read(5,msd_info)
+  read(5,flow_info)
   !read(5,conductivity_info)
 
 
@@ -91,16 +92,19 @@ program analysis
   write(*,*) "DATA INPUT :"
   write(*,*) "file positions =",trim(filename)
   write(*,*) "nskips =",nskips
-  write(*,*) "nprint =",nprint
+  write(*,*) "dt_print =",dt_print
   write(*,*) "LAMMPS INPUT :"
   write(*,*) "orga =", orga
   write(*,*) "RDF INPUT :"
-  write(*,*) "limit =",limit
-  write(*,*) "dr =",dr
-  write(*,*) "referential =",referential
+  write(*,*) "limit_rdf =",limit_rdf
+  write(*,*) "dr_rdf =",dr_rdf
   write(*,*) "MSD INPUT :"
-  write(*,*) "nbins =",nbins
-  write(*,*) "dt =",dt
+  write(*,*) "gap_time_msd =", gap_time
+  write(*,*) "FLOW INPUT :"
+  write(*,*) "gap_time_flow =", gap_time
+  write(*,*) "referential =",referential
+  write(*,*) "dr_flow =",dr_flow
+  write(*,*) "limit_flow =",limit_flow
   write(*,*) "---------------------"
 
   SELECT CASE(referential)
@@ -109,13 +113,21 @@ program analysis
   CASE('particle')
      referential_bool = .True.
   END SELECT
+  igap_time = int(gap_time / dt_print)
 
   trajunit=10
-  call open_read_lammps(trajunit,trim(directory)//trim(filename),trajfile_lammps,natoms,timestep,Lx,Ly,Lz,orga,iostat)
+  call open_read_lammps(trajunit,trim(directory)//trim(filename),trajfile_lammps,natoms,istep,Lx,Ly,Lz,orga,iostat)
 
   write(*,*) "natoms =",natoms
   write(*,*) "box =",Lx,Ly,Lz
   write(*,*) "---------------------"
+
+  if (limit_rdf.lt.0) then
+     limit_rdf = min(Lx,Ly,Lz)/2
+  endif
+  if (limit_flow.lt.0) then
+     limit_flow = min(Lx,Ly,Lz)/2
+  endif
 
 
 !                  %----------------%
@@ -151,10 +163,10 @@ program analysis
   selectionT= .false.
   do iatm=1,2
      do iatm2=iatm,2
-        call create_gofr(gofr(iatm,iatm2),limit=limit,dr=dr)
-        call create_G(G(iatm,iatm2),nbins,limit,dr)
+        call create_gofr(gofr(iatm,iatm2),limit=limit_rdf,dr=dr_rdf)
+        call create_G(G(iatm,iatm2),igap_time,limit_flow,dr_flow)
      enddo
-     call create_msd(msd(iatm),nbins=nbins,dt=dt)
+     call create_msd(msd(iatm),nbins=igap_time,dt=dt_print)
   enddo
   !call create_conductivity(conduct,nbins=nbins,dt=dt)
 
@@ -226,12 +238,12 @@ program analysis
      if (iostat.ne.0) exit
 
      step=step+1
-     if (step<=nbins) then
+     if (step<=igap_time) then
         bin=step
         traj_com(:,:,bin)=com
      else
         
-        bin=mod(step-1,nbins)+1
+        bin=mod(step-1,igap_time)+1
         reference=traj_com(:,:,bin)
 
 !                  %----------------%
@@ -246,7 +258,7 @@ program analysis
               !        vcm,selection_per_atom(iatm,:),selection_per_atom(iatm2,:),box,usepbc,&
               !        referential)        
            enddo
-           call update_msd(msd(iatm),atoms,traj_com,bin,nbins,selection_per_atom(iatm,:))
+           call update_msd(msd(iatm),atoms,traj_com,bin,igap_time,selection_per_atom(iatm,:))
         enddo
         !call update_conductivity(conduct,traj_com,charge_com,bin)
 
