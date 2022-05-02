@@ -255,9 +255,9 @@ program analysis
            do iatm2=iatm,2
               call update_gofr(gofr(iatm,iatm2),atoms,configuration,selection_per_atom(iatm,:),&
                             selection_per_atom(iatm2,:),box)
-              !call update_G(G(iatm,iatm2),natoms,reference,com,&
-              !        vcm,selection_per_atom(iatm,:),selection_per_atom(iatm2,:),box,usepbc,&
-              !        referential)        
+              call update_G(G(iatm,iatm2),natoms,reference,configuration, &
+                      velocities,selection_per_atom(iatm,:),selection_per_atom(iatm2,:),box,usepbc=.True.,&
+                      referential=referential_bool)        
            enddo
            call update_msd(msd(iatm),atoms,traj_com,bin,igap_time,selection_per_atom(iatm,:))
         enddo
@@ -282,7 +282,7 @@ program analysis
   do iatm=1,2
      do iatm2=iatm,2
         call finalize_gofr(gofr(iatm,iatm2),box)
-        !call finalize_G(G(iatm,iatm2),box)
+        call finalize_G(G(iatm,iatm2),box)
      enddo
      call finalize_msd(msd(iatm))
   enddo
@@ -300,9 +300,9 @@ program analysis
         open(unit=13,file="gofr-"//trim(title)//".dat")
            call write_gofr(13,gofr(iatm,iatm2),trim(title))
         close(13)
-        !open(15,file="G-"//trim(title)//".dat")
-        !   call write_G(15,G(iatm,iatm2),trim(title))
-        !close(15)
+        open(15,file="G-"//trim(title)//".dat")
+           call write_G(15,G(iatm,iatm2),trim(title))
+        close(15)
         endif
      enddo
         open(unit=14,file="msd-"//trim(list_labels(iatm))//".dat")
