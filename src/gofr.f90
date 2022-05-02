@@ -74,12 +74,13 @@ contains
                 vector=configuration(:,iat2)-configuration(:,iat1)
                 if (my_usepbc) vector=minimum_image(vector,box)
                 dist=distance(vector)
-                if (dist.lt.1) then
+                if (dist.lt.0.5) then
                         print*, iat2, configuration(:,iat2)
                         print*, iat1, configuration(:,iat1)
                         print*, configuration(:,iat2)-configuration(:,iat1)
                         print*, vector
                         print*, dist
+                        print*, "Error in gofr: distance too shoort"
                         stop
                 endif
                 index=floor(dist/dr)+1

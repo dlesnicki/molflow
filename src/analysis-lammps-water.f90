@@ -34,19 +34,18 @@ program analysis
   real(kind=dp), dimension(:), allocatable :: mass
   real(kind=dp), dimension(3) :: vector
   real(kind=dp), dimension(3) :: com_box
-  logical, dimension(:), allocatable :: selectionT
   logical, dimension(:,:), allocatable :: selection_per_atom
   character(len=2), dimension(:), allocatable :: symbol
-  logical :: usepbc=.true.  
+  !logical :: usepbc=.true.  
   logical :: referential_bool ! if T then particle frame otherwise lab frame
   integer, dimension(:), allocatable :: id_type
-  integer :: bin,step,nsteps,skip,nskips,nprint,iatm,iatm2, istep
+  integer :: bin,step,nsteps,skip,nskips,iatm,iatm2, istep
   integer :: iostat
   type(lammpsfile) :: trajfile_lammps
-  integer :: i,j
-  real(kind=dp), dimension(:,:), allocatable :: com
-  real(kind=dp), dimension(:), allocatable :: charge_com
-  real(kind=dp), dimension(:,:), allocatable :: vcm
+  !integer :: i,j
+  !real(kind=dp), dimension(:,:), allocatable :: com
+  !real(kind=dp), dimension(:), allocatable :: charge_com
+  !real(kind=dp), dimension(:,:), allocatable :: vcm
   real(kind=dp) :: box_mass, box_charge
 
   character(len=2), dimension(2) :: list_labels
@@ -66,7 +65,7 @@ program analysis
   !TYPES
   type(gofr_type),dimension(:,:),allocatable :: gofr
   type(msd_type), dimension(:),  allocatable :: msd
-  type(conductivity_type)                    :: conduct
+  !type(conductivity_type)                    :: conduct
   type(G_type), dimension(:,:),  allocatable :: G
 
 
@@ -128,7 +127,9 @@ program analysis
   if (limit_flow.lt.0) then
      limit_flow = min(Lx,Ly,Lz)/2
   endif
-
+  write(*,*) "limit_rdf =", limit_rdf
+  write(*,*) "limit_flow =", limit_flow
+  
 
 !                  %----------------%
 !                  |   CREATE BOX   |
@@ -147,7 +148,8 @@ program analysis
   allocate(configuration_old(3,natoms))
   allocate(velocities(3,natoms))  
   allocate(selection_per_atom(2,natoms))
-  
+  allocate(traj_com(3,natoms,igap_time)) 
+ 
   allocate(id_type(natoms))
   allocate(mass(natoms))
   allocate(symbol(natoms))
@@ -160,7 +162,6 @@ program analysis
 !                  |  CREATE TOOLS  |
 !                  %----------------%
 
-  selectionT= .false.
   do iatm=1,2
      do iatm2=iatm,2
         call create_gofr(gofr(iatm,iatm2),limit=limit_rdf,dr=dr_rdf)
@@ -240,7 +241,7 @@ program analysis
      step=step+1
      if (step<=igap_time) then
         bin=step
-        traj_com(:,:,bin)=com
+        traj_com(:,:,bin)=configuration
      else
         
         bin=mod(step-1,igap_time)+1
@@ -264,9 +265,9 @@ program analysis
 
 
 
-        traj_com(:,:,bin)=com
+        traj_com(:,:,bin)=configuration
      end if
-     if (mod(step,nprint)==0) write(*,*) "step = ",step
+     if (mod(step,1)==0) write(*,*) "step = ",step
   end do
 
   nsteps=step
@@ -322,7 +323,7 @@ CONTAINS
     real(kind=dp),dimension(3),intent(in) :: a1,a2
 
     real(kind=dp) :: r,x,y
-    integer :: index,i,j,L,M
+    integer :: i,j,L,M
     
 
     OPEN(unit=16,file="DensityMap_xy.dat",status="unknown")
