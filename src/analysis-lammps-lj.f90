@@ -21,6 +21,7 @@ program analysis
   !GENERAL PARAMETERS
   type(atom),dimension(:), allocatable :: atoms
   character(len=2), dimension(:), allocatable :: symbol
+  real(kind=dp), dimension(:), allocatable :: charges 
   integer :: natoms
   real(kind=dp), dimension(:,:), allocatable :: configuration,configuration_old,reference
   real(kind=dp), dimension(:,:), allocatable :: velocities
@@ -112,6 +113,7 @@ program analysis
 
   allocate(symbol(natoms))
   allocate(atoms(natoms))
+  allocate(charges(natoms))
   allocate(configuration(3,natoms))
   allocate(configuration_old(3,natoms))
   allocate(velocities(3,natoms))  
@@ -148,7 +150,7 @@ program analysis
  !                 %----------------%
          
      do skip=1,nskips
-        call read_lammps(trajfile_lammps,configuration,velocities,id_type,symbol,iostat)       
+        call read_lammps(trajfile_lammps,configuration,velocities,charges,id_type,symbol,iostat)       
         if (iostat.eq.0) cyc = cyc+1
 
      !#############################################################################
