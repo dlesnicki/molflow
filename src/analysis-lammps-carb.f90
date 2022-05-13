@@ -363,6 +363,18 @@ program analysis
   close(14)
 
 CONTAINS
+ 
+  subroutine density_3D(density3, configuration, selection1, selection2, box, usepbc)
+    real(kind=dp), dimension(:,:,:,:), intent(inout) :: density3
+    real(kind=dp), dimension(:,:), intent(in) :: configuration
+    logical, dimension(:), intent(in) :: selection1,selection2
+    type(box_type), intent(in) :: box
+    logical, intent(in), optional :: usepbc
+
+    
+
+  end subroutine density_3D
+
 
   subroutine density_map_xy(G,a1,a2)
     implicit none
