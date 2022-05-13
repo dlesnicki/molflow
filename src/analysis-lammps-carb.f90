@@ -78,8 +78,8 @@ program analysis
   !DENSITY
   real(kind=dp), dimension(:,:,:,:), allocatable :: density_cat
   real(kind=dp), dimension(:,:,:), allocatable :: config_carb
-  integer :: max_density, icat
-  real(kind=dp) :: limit_dens, dr_dens 
+  integer :: max_density, icat, ix, iy, iz
+  real(kind=dp) :: limit_dens, dr_dens, x, y 
 
 !                  %----------------%
 !                  |  READ INPUTS   |
@@ -277,6 +277,9 @@ program analysis
            mol_mass = 0.0
            do i=1,at_mol(iatm)
               j = j+1
+              if (at_mol(iatm).EQ.4) then
+                 config_carb(iatm,i,:) = configuration(:,j)
+              endif 
               com(:,iatm) = com(:,iatm) + mass(j)*configuration(:,j)
               charge_com(iatm) = charge_com(iatm) + charge(j)
               vcm(:,iatm) = vcm(:,iatm) + mass(j)*velocities(:,j)
@@ -363,6 +366,23 @@ program analysis
         !close(15)
         endif
      enddo
+     endif
+  enddo
+  do iatm=3,5
+     icat=iatm-2
+     if(count_labels(iatm).ne.0) then
+        open(unit=23,file="dens-cat-"//trim(list_labels(iatm))//".dat")
+          do ix=1,size(density_cat(icat,:,1,1))
+             x = (dble(ix)-0.5_dp)*dr_dens
+             do iy=1,size(density_cat(icat,1,:,1))
+                y = (dble(iy)-0.5_dp)*dr_dens
+                do iz=1,size(density_cat(icat,1,1,:))
+                   y = (dble(iz)-0.5_dp)*dr_dens
+                   write(13,'(4F14.6)') x,y,z, density_cat(icat,ix,iy,iz) 
+                enddo
+             enddo
+          enddo
+        close(unit=23)
      endif
   enddo
   do imol=1,4
