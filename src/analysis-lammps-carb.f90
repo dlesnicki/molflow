@@ -75,6 +75,12 @@ program analysis
 
   integer :: Nmolecule
 
+  !DENSITY
+  real(kind=dp), dimension(:,:,:,:), allocatable :: density_cat
+  real(kind=dp), dimension(:,:,:), allocatable :: config_carb
+  integer :: max_density, icat
+  real(kind=dp) :: limit_dens, dr_dens 
+
 !                  %----------------%
 !                  |  READ INPUTS   |
 !                  %----------------%
@@ -82,6 +88,7 @@ program analysis
   namelist /data/ directory,filename,nskips,nprint,referential
   namelist /lammps/ orga
   namelist /rdf/ limit,dr
+  namelist /density/ limit_dens,dr_dens
   namelist /msd_info/ nbins,dt
  
   
@@ -150,6 +157,10 @@ program analysis
   allocate(gofr(5,5))
   allocate(G(5,5))
   allocate(msd(4))
+
+  max_density=floor(limit_dens/dr_dens)
+  allocate(density_cat(3, max_density, max_density, max_density))
+  allocate(config_carb(natoms/6, 4, 3))
 
 !                  %----------------%
 !                  |  CREATE TOOLS  |
@@ -305,7 +316,10 @@ program analysis
         enddo
         call update_conductivity(conduct,traj_com,charge_com,bin)
 
-
+        do iatm=3,5
+           icat=iatm-2
+           call density_3D(icat, max_density, density_cat, configuration,config_carb, selection_carb(iatm,:), box, usepbc)
+        enddo
 
         traj_com(:,:,bin)=com
      end if
@@ -364,17 +378,77 @@ program analysis
 
 CONTAINS
  
-  subroutine density_3D(density3, configuration, selection1, selection2, box, usepbc)
-    real(kind=dp), dimension(:,:,:,:), intent(inout) :: density3
+  subroutine density_3D(icat, max_density, density_cat, configuration,config_carb, selection, box, usepbc)
+    integer, intent(in) :: icat
+    integer, intent(in) :: max_density
+    real(kind=dp), dimension(:,:,:,:), intent(inout) :: density_cat
     real(kind=dp), dimension(:,:), intent(in) :: configuration
-    logical, dimension(:), intent(in) :: selection1,selection2
+    real(kind=dp), dimension(:,:,:), intent(in) :: config_carb
+    logical, dimension(:), intent(in) :: selection
     type(box_type), intent(in) :: box
     logical, intent(in), optional :: usepbc
 
-    
+    integer :: natoms, icarb,  intra, iat1
+    real(kind=dp), dimension(3) :: x, y, z, vector
+    integer :: vx, vy, vz
+    logical :: my_usepbc
 
+    natoms=size(configuration(1,:))
+    if (present(usepbc)) my_usepbc=usepbc
+
+    do icarb=1,size(config_carb(:,1,1))
+       do intra=2,4
+          x = config_carb(icarb,intra,:)-config_carb(icarb,1,:)
+          if (my_usepbc) x = minimum_image(x, box)
+          z = cross(x, config_carb(icarb,mod(intra+1,3),:)-config_carb(icarb,1,:))
+          if (my_usepbc) z = minimum_image(z,box)
+          y = cross(x, z)
+          x = x/norm(x)
+          y = y/norm(y)
+          z = z/norm(z)
+          do iat1=1, natoms
+             if (selection(iat1)) then
+                vector=configuration(:,iat1)-config_carb(icarb, 1,:)
+                if (my_usepbc) vector=minimum_image(vector, box)
+                vx = floor(dot(x,vector)/dr)
+                vy = floor(dot(y,vector)/dr)
+                vz = floor(dot(z,vector)/dr)
+                if (abs(vx)<(max_density)) then
+                   if (abs(vy)<(max_density)) then
+                      if (abs(vz)<(max_density)) then
+                              density_cat(icat, vx,vy,vz) = density_cat(icat, vx,vy,vz)+1.0_dp
+                       endif
+                   endif
+                endif
+             endif
+          enddo
+       enddo
+    enddo           
+  
   end subroutine density_3D
 
+FUNCTION norm(a)
+  REAL(kind=dp) :: norm
+  REAL(kind=dp),DIMENSION(3) :: a
+
+  norm = sqrt(a(1)**2  + a(2)**2 + a(3)**2 )
+END FUNCTION norm
+
+FUNCTION dot(a, b)
+  REAL(kind=dp) :: dot
+  REAL(kind=dp), DIMENSION(3), INTENT(IN) :: a, b
+
+  dot = a(1)*b(1) + a(2)*b(2) + a(3)*b(3)
+END FUNCTION dot
+
+FUNCTION cross(a, b)
+  REAL(kind=dp), DIMENSION(3) :: cross
+  REAL(kind=dp), DIMENSION(3), INTENT(IN) :: a, b
+
+  cross(1) = a(2) * b(3) - a(3) * b(2)
+  cross(2) = a(3) * b(1) - a(1) * b(3)
+  cross(3) = a(1) * b(2) - a(2) * b(1)
+END FUNCTION cross
 
   subroutine density_map_xy(G,a1,a2)
     implicit none
