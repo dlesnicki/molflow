@@ -203,7 +203,7 @@ contains
        if (iostat.eq.0) then
           SELECT CASE(file%orga)
           CASE("carbonate")
-              read(line,*) id_at,id_mol,id_type,symbol_at,q,vector_pos(:),vector_vel(:), vector_frc(:)
+              read(line,*) id_at,id_mol,id_type,symbol_at,q,vector_pos(:),vector_vel(:)
           CASE("lj")
               read(line,*) id_at,id_type,symbol_at,vector_pos(:),vector_vel(:),vector_frc(:)
               q = 0

@@ -60,7 +60,7 @@ program analysis
   type(box_type) :: box
 
   !DLPOLY PARAMETERS
-  integer :: keytrj,imcon,frame,records
+  !integer :: keytrj,imcon,frame,records
   character(len=200) :: orga
 
   !INPUT PARAMETERS
@@ -78,7 +78,7 @@ program analysis
   !DENSITY
   real(kind=dp), dimension(:,:,:,:), allocatable :: density_cat
   real(kind=dp), dimension(:,:,:), allocatable :: config_carb
-  integer :: max_density, icat, ix, iy, iz
+  integer :: max_density, icat, ix, iy, iz, icarb
   real(kind=dp) :: limit_dens, dr_dens, x, y 
 
 !                  %----------------%
@@ -95,6 +95,7 @@ program analysis
   read(5,data)
   read(5,lammps)
   read(5,rdf)
+  read(5,density)
   read(5,msd_info)
   !read(5,conductivity_info)
 
@@ -109,6 +110,9 @@ program analysis
   write(*,*) "RDF INPUT :"
   write(*,*) "limit =",limit
   write(*,*) "dr =",dr
+  write(*,*) "Dens INPUT :"
+  write(*,*) "limit_dens =",limit_dens
+  write(*,*) "dr_dens =",dr_dens
   write(*,*) "referential =",referential
   write(*,*) "MSD INPUT :"
   write(*,*) "nbins =",nbins
@@ -159,6 +163,7 @@ program analysis
   allocate(msd(4))
 
   max_density=floor(limit_dens/dr_dens)
+  print*, max_density
   allocate(density_cat(3, max_density, max_density, max_density))
   allocate(config_carb(natoms/6, 4, 3))
 
@@ -273,12 +278,14 @@ program analysis
         charge_com=0.0_dp
 
         j=0
+        icarb=0
         do iatm=1,Nmolecule
            mol_mass = 0.0
+           if (at_mol(iatm).EQ.4) icarb=icarb+1
            do i=1,at_mol(iatm)
               j = j+1
               if (at_mol(iatm).EQ.4) then
-                 config_carb(iatm,i,:) = configuration(:,j)
+                 config_carb(icarb,i,:) = configuration(:,j)
               endif 
               com(:,iatm) = com(:,iatm) + mass(j)*configuration(:,j)
               charge_com(iatm) = charge_com(iatm) + charge(j)
@@ -420,7 +427,7 @@ CONTAINS
        do intra=2,4
           x = config_carb(icarb,intra,:)-config_carb(icarb,1,:)
           if (my_usepbc) x = minimum_image(x, box)
-          z = cross(x, config_carb(icarb,mod(intra+1,3),:)-config_carb(icarb,1,:))
+          z = cross(x, config_carb(icarb,mod(intra+2,3)+2,:)-config_carb(icarb,1,:))
           if (my_usepbc) z = minimum_image(z,box)
           y = cross(x, z)
           x = x/norm(x)
@@ -470,32 +477,5 @@ FUNCTION cross(a, b)
   cross(3) = a(1) * b(2) - a(2) * b(1)
 END FUNCTION cross
 
-  subroutine density_map_xy(G,a1,a2)
-    implicit none
-
-    type(G_type), intent(in) :: G
-    real(kind=dp),dimension(3),intent(in) :: a1,a2
-
-    real(kind=dp) :: r,x,y
-    integer :: index,i,j,L,M
-    
-
-    OPEN(unit=16,file="DensityMap_xy.dat",status="unknown")
-    WRITE(16,'("# X",F14.6,", Y",F14.6,", Z",F14.6)')
-    
-    L=int(a1(1))
-    M=int(a2(2))
-
-    DO i=-L,L
-      DO j=-M,M
-        x=dble(i)
-        y=dble(j)
-        r=int(sqrt(x**2+y**2))
-        WRITE(16,*)x,y,G%density(int(r))*x/sqrt(x**2+y**2)
-      END DO
-      WRITE(16,*)
-    END DO
-    CLOSE(16)
-  end subroutine density_map_xy
 
 end program analysis
