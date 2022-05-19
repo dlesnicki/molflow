@@ -379,13 +379,13 @@ program analysis
      icat=iatm-2
      if(count_labels(iatm).ne.0) then
         open(unit=23,file="dens-cat-"//trim(list_labels(iatm))//".dat")
-          do ix=1,size(density_cat(icat,:,1,1))
+          do ix=1,max_density
              x = (dble(ix)-0.5_dp)*dr_dens
-             do iy=1,size(density_cat(icat,1,:,1))
+             do iy=1,max_density
                 y = (dble(iy)-0.5_dp)*dr_dens
-                do iz=1,size(density_cat(icat,1,1,:))
+                do iz=1,max_density
                    y = (dble(iz)-0.5_dp)*dr_dens
-                   write(13,'(4F14.6)') x,y,z, density_cat(icat,ix,iy,iz) 
+                   write(23,'(4F14.6)') x,y,z, density_cat(icat,ix,iy,iz) 
                 enddo
              enddo
           enddo
@@ -437,12 +437,12 @@ CONTAINS
              if (selection(iat1)) then
                 vector=configuration(:,iat1)-config_carb(icarb, 1,:)
                 if (my_usepbc) vector=minimum_image(vector, box)
-                vx = floor(dot(x,vector)/dr)
-                vy = floor(dot(y,vector)/dr)
-                vz = floor(dot(z,vector)/dr)
-                if (abs(vx)<(max_density)) then
-                   if (abs(vy)<(max_density)) then
-                      if (abs(vz)<(max_density)) then
+                vx = abs(floor(dot(x,vector)/dr))
+                vy = floor(dot(y,vector)/dr) + floor(max_density/2.0)
+                vz = abs(floor(dot(z,vector)/dr)) 
+                if ((vx<(max_density)).AND.(vx>0)) then
+                   if ((vy<(max_density)).AND.(vy>0)) then
+                      if ((vz<(max_density)).AND.(vz>0)) then
                               density_cat(icat, vx,vy,vz) = density_cat(icat, vx,vy,vz)+1.0_dp
                        endif
                    endif
