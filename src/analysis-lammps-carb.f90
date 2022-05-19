@@ -78,8 +78,9 @@ program analysis
   !DENSITY
   real(kind=dp), dimension(:,:,:,:), allocatable :: density_cat
   real(kind=dp), dimension(:,:,:), allocatable :: config_carb
-  integer :: max_density, icat, ix, iy, iz, icarb
-  real(kind=dp) :: limit_dens, dr_dens, x, y 
+  real(kind=dp), dimension(:,:), allocatable :: printing_density
+  integer :: max_density, icat, ix, iy, iz, icarb, icount, imod
+  real(kind=dp) :: limit_dens, dr_dens 
 
 !                  %----------------%
 !                  |  READ INPUTS   |
@@ -166,6 +167,7 @@ program analysis
   print*, max_density
   allocate(density_cat(3, max_density, max_density, max_density))
   allocate(config_carb(natoms/6, 4, 3))
+  allocate(printing_density(ceiling(max_density*max_density*max_density/6.0),6))
 
 !                  %----------------%
 !                  |  CREATE TOOLS  |
@@ -376,18 +378,34 @@ program analysis
      endif
   enddo
   do iatm=3,5
+     icount=0
      icat=iatm-2
      if(count_labels(iatm).ne.0) then
         open(unit=23,file="dens-cat-"//trim(list_labels(iatm))//".dat")
-          do ix=1,max_density
-             x = (dble(ix)-0.5_dp)*dr_dens
+        write(23,*) "CUBE FILE FOR "//trim(list_labels(iatm))//" AROUND CARBONATE"
+        write(23,*) "OUTER LOOP: X, MIDDLE LOOP: Y, INNER LOOP: Z"
+        write(23,'(i5,4F12.6)') 3, limit_dens/2, 0.0, 0.0 
+        write(23,'(i5,4F12.6)') max_density, dr_dens, 0.0, 0.0 
+        write(23,'(i5,4F12.6)') max_density, 0.0, dr_dens, 0.0 
+        write(23,'(i5,4F12.6)') max_density, 0.0, 0.0, dr_dens
+        write(23,'(i5,4F12.6)') 12, 0.0, limit_dens/2, 0.0, 0.0
+        write(23,'(i5,4F12.6)') 8, 0.0, limit_dens/2, 0.0, 0.0
+        write(23,'(i5,4F12.6)') 8, 0.0, limit_dens/2, 0.0, 0.0
+        do ix=1,max_density
+             !x = (dble(ix)-0.5_dp)*dr_dens
              do iy=1,max_density
-                y = (dble(iy)-0.5_dp)*dr_dens
+                !y = (dble(iy)-0.5_dp)*dr_dens
                 do iz=1,max_density
-                   y = (dble(iz)-0.5_dp)*dr_dens
-                   write(23,'(4F14.6)') x,y,z, density_cat(icat,ix,iy,iz) 
+                   !y = (dble(iz)-0.5_dp)*dr_dens
+                   icount=icount+1
+                   imod = mod(icount,6)
+                   if (imod.eq.0) imod=6
+                   printing_density(icount/6+1,imod)=density_cat(icat,ix,iy,iz)
                 enddo
              enddo
+          enddo
+          do ix=1,size(printing_density)
+             write(23,'(6F14.6)') printing_density(ix,:)
           enddo
         close(unit=23)
      endif
