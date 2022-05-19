@@ -80,7 +80,7 @@ program analysis
   real(kind=dp), dimension(:,:,:), allocatable :: config_carb
   real(kind=dp), dimension(:,:), allocatable :: printing_density
   integer :: max_density, icat, ix, iy, iz, icarb, icount, imod
-  real(kind=dp) :: limit_dens, dr_dens 
+  real(kind=dp) :: limit_dens, dr_dens, rco, aoco 
 
 !                  %----------------%
 !                  |  READ INPUTS   |
@@ -173,6 +173,8 @@ program analysis
 !                  |  CREATE TOOLS  |
 !                  %----------------%
 
+  rco=1.14
+  aoco=2*pi/3
   selectionT= .false.
   do iatm=1,5
      do iatm2=iatm,5
@@ -381,16 +383,16 @@ program analysis
      icount=0
      icat=iatm-2
      if(count_labels(iatm).ne.0) then
-        open(unit=23,file="dens-cat-"//trim(list_labels(iatm))//".dat")
+        open(unit=23,file="dens-cat-"//trim(list_labels(iatm))//".cube")
         write(23,*) "CUBE FILE FOR "//trim(list_labels(iatm))//" AROUND CARBONATE"
         write(23,*) "OUTER LOOP: X, MIDDLE LOOP: Y, INNER LOOP: Z"
-        write(23,'(i5,4F12.6)') 3, limit_dens/2, 0.0, 0.0 
+        write(23,'(i5,4F12.6)') 3, 0.0, 0.0, 0.0 
         write(23,'(i5,4F12.6)') max_density, dr_dens, 0.0, 0.0 
         write(23,'(i5,4F12.6)') max_density, 0.0, dr_dens, 0.0 
         write(23,'(i5,4F12.6)') max_density, 0.0, 0.0, dr_dens
         write(23,'(i5,4F12.6)') 12, 0.0, limit_dens/2, 0.0, 0.0
-        write(23,'(i5,4F12.6)') 8, 0.0, limit_dens/2, 0.0, 0.0
-        write(23,'(i5,4F12.6)') 8, 0.0, limit_dens/2, 0.0, 0.0
+        write(23,'(i5,4F12.6)') 8, 0.0, limit_dens/2+1.14, 0.0, 0.0
+        write(23,'(i5,4F12.6)') 8, 0.0, limit_dens/2+rco*cos(2*pi/3), rco*sin(aoco), 0.0
         do ix=1,max_density
              !x = (dble(ix)-0.5_dp)*dr_dens
              do iy=1,max_density
@@ -404,7 +406,7 @@ program analysis
                 enddo
              enddo
           enddo
-          do ix=1,size(printing_density)
+          do ix=1,size(printing_density, dim=1)
              write(23,'(6F14.6)') printing_density(ix,:)
           enddo
         close(unit=23)
