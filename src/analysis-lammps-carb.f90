@@ -165,7 +165,7 @@ program analysis
 
   max_density=floor(limit_dens/dr_dens)
   print*, max_density
-  allocate(density_cat(3, max_density, max_density, max_density))
+  allocate(density_cat(3, max_density, max_density/2, max_density/2))
   allocate(config_carb(natoms/6, 4, 3))
   allocate(printing_density(ceiling(max_density*max_density*max_density/6.0),6))
 
@@ -332,7 +332,7 @@ program analysis
 
         do iatm=3,5
            icat=iatm-2
-           call density_3D(icat, max_density, density_cat, configuration,config_carb, selection_carb(iatm,:), box, usepbc)
+           call density_3D(icat, max_density, density_cat, configuration,config_carb, selection_carb(iatm,:), box, usepbc, dr_dens)
         enddo
 
         traj_com(:,:,bin)=com
@@ -388,21 +388,21 @@ program analysis
         write(23,*) "OUTER LOOP: X, MIDDLE LOOP: Y, INNER LOOP: Z"
         write(23,'(i5,4F12.6)') 3, 0.0, 0.0, 0.0 
         write(23,'(i5,4F12.6)') max_density, dr_dens, 0.0, 0.0 
-        write(23,'(i5,4F12.6)') max_density, 0.0, dr_dens, 0.0 
-        write(23,'(i5,4F12.6)') max_density, 0.0, 0.0, dr_dens
+        write(23,'(i5,4F12.6)') max_density/2, 0.0, dr_dens, 0.0 
+        write(23,'(i5,4F12.6)') max_density/2, 0.0, 0.0, dr_dens
         write(23,'(i5,4F12.6)') 12, 0.0, limit_dens/2, 0.0, 0.0
         write(23,'(i5,4F12.6)') 8, 0.0, limit_dens/2+1.14, 0.0, 0.0
         write(23,'(i5,4F12.6)') 8, 0.0, limit_dens/2+rco*cos(2*pi/3), rco*sin(aoco), 0.0
         do ix=1,max_density
              !x = (dble(ix)-0.5_dp)*dr_dens
-             do iy=1,max_density
+             do iy=1,max_density/2
                 !y = (dble(iy)-0.5_dp)*dr_dens
-                do iz=1,max_density
+                do iz=1,max_density/2
                    !y = (dble(iz)-0.5_dp)*dr_dens
                    icount=icount+1
                    imod = mod(icount,6)
                    if (imod.eq.0) imod=6
-                   printing_density(icount/6+1,imod)=density_cat(icat,ix,iy,iz)
+                   printing_density(icount/6+1,imod)=density_cat(icat,ix,iy,iz)/(nsteps*count_labels(iatm)*(Nmolecule/6))
                 enddo
              enddo
           enddo
@@ -425,7 +425,7 @@ program analysis
 
 CONTAINS
  
-  subroutine density_3D(icat, max_density, density_cat, configuration,config_carb, selection, box, usepbc)
+  subroutine density_3D(icat, max_density, density_cat, configuration,config_carb, selection, box, usepbc, dr)
     integer, intent(in) :: icat
     integer, intent(in) :: max_density
     real(kind=dp), dimension(:,:,:,:), intent(inout) :: density_cat
@@ -434,6 +434,7 @@ CONTAINS
     logical, dimension(:), intent(in) :: selection
     type(box_type), intent(in) :: box
     logical, intent(in), optional :: usepbc
+    real(kind=dp), intent(in) :: dr
 
     integer :: natoms, icarb,  intra, iat1
     real(kind=dp), dimension(3) :: x, y, z, vector
@@ -442,7 +443,6 @@ CONTAINS
 
     natoms=size(configuration(1,:))
     if (present(usepbc)) my_usepbc=usepbc
-
     do icarb=1,size(config_carb(:,1,1))
        do intra=2,4
           x = config_carb(icarb,intra,:)-config_carb(icarb,1,:)
@@ -457,12 +457,12 @@ CONTAINS
              if (selection(iat1)) then
                 vector=configuration(:,iat1)-config_carb(icarb, 1,:)
                 if (my_usepbc) vector=minimum_image(vector, box)
-                vx = abs(floor(dot(x,vector)/dr))
-                vy = floor(dot(y,vector)/dr) + floor(max_density/2.0)
-                vz = abs(floor(dot(z,vector)/dr)) 
+                vx = (floor(dot(x,vector)/dr)) + floor(max_density/2.0)
+                vy = abs(floor(dot(y,vector)/dr)) 
+                vz = abs(floor(dot(z,vector)/dr))
                 if ((vx<(max_density)).AND.(vx>0)) then
-                   if ((vy<(max_density)).AND.(vy>0)) then
-                      if ((vz<(max_density)).AND.(vz>0)) then
+                   if ((vy<(max_density/2)).AND.(vy>0)) then
+                      if ((vz<(max_density/2)).AND.(vz>0)) then
                               density_cat(icat, vx,vy,vz) = density_cat(icat, vx,vy,vz)+1.0_dp
                        endif
                    endif
