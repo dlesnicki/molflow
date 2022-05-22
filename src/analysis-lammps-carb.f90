@@ -165,9 +165,9 @@ program analysis
 
   max_density=floor(limit_dens/dr_dens)
   print*, max_density
-  allocate(density_cat(3, max_density, max_density/2, max_density/2))
+  allocate(density_cat(3, max_density, max_density, max_density))
   allocate(config_carb(natoms/6, 4, 3))
-  allocate(printing_density(ceiling(max_density*max_density*max_density/6.0),6))
+  allocate(printing_density(ceiling(max_density*max_density*max_density/(6.0)),6))
 
 !                  %----------------%
 !                  |  CREATE TOOLS  |
@@ -386,18 +386,19 @@ program analysis
         open(unit=23,file="dens-cat-"//trim(list_labels(iatm))//".cube")
         write(23,*) "CUBE FILE FOR "//trim(list_labels(iatm))//" AROUND CARBONATE"
         write(23,*) "OUTER LOOP: X, MIDDLE LOOP: Y, INNER LOOP: Z"
-        write(23,'(i5,4F12.6)') 3, 0.0, 0.0, 0.0 
+        write(23,'(i5,4F12.6)') 4, 0.0, 0.0, 0.0 
         write(23,'(i5,4F12.6)') max_density, dr_dens, 0.0, 0.0 
-        write(23,'(i5,4F12.6)') max_density/2, 0.0, dr_dens, 0.0 
-        write(23,'(i5,4F12.6)') max_density/2, 0.0, 0.0, dr_dens
-        write(23,'(i5,4F12.6)') 12, 0.0, limit_dens/2, 0.0, 0.0
-        write(23,'(i5,4F12.6)') 8, 0.0, limit_dens/2+1.14, 0.0, 0.0
-        write(23,'(i5,4F12.6)') 8, 0.0, limit_dens/2+rco*cos(2*pi/3), rco*sin(aoco), 0.0
+        write(23,'(i5,4F12.6)') max_density, 0.0, dr_dens, 0.0 
+        write(23,'(i5,4F12.6)') max_density, 0.0, 0.0, dr_dens
+        write(23,'(i5,4F12.6)') 12, 0.0, limit_dens/2, limit_dens/2, limit_dens/2
+        write(23,'(i5,4F12.6)') 8, 0.0, limit_dens/2+1.14, limit_dens/2, limit_dens/2
+        write(23,'(i5,4F12.6)') 8, 0.0, limit_dens/2+rco*cos(aoco), limit_dens/2+rco*sin(aoco), limit_dens/2
+        write(23,'(i5,4F12.6)') 8, 0.0, limit_dens/2+rco*cos(-aoco), limit_dens/2+rco*sin(-aoco), limit_dens/2
         do ix=1,max_density
              !x = (dble(ix)-0.5_dp)*dr_dens
-             do iy=1,max_density/2
+             do iy=1,max_density
                 !y = (dble(iy)-0.5_dp)*dr_dens
-                do iz=1,max_density/2
+                do iz=1,max_density
                    !y = (dble(iz)-0.5_dp)*dr_dens
                    icount=icount+1
                    imod = mod(icount,6)
@@ -407,7 +408,7 @@ program analysis
              enddo
           enddo
           do ix=1,size(printing_density, dim=1)
-             write(23,'(6F14.6)') printing_density(ix,:)
+             write(23,'(6E14.6)') printing_density(ix,:)
           enddo
         close(unit=23)
      endif
@@ -458,11 +459,11 @@ CONTAINS
                 vector=configuration(:,iat1)-config_carb(icarb, 1,:)
                 if (my_usepbc) vector=minimum_image(vector, box)
                 vx = (floor(dot(x,vector)/dr)) + floor(max_density/2.0)
-                vy = abs(floor(dot(y,vector)/dr)) 
-                vz = abs(floor(dot(z,vector)/dr))
+                vy = (floor(dot(y,vector)/dr)) + floor(max_density/2.0) 
+                vz = (floor(dot(z,vector)/dr)) + floor(max_density/2.0)
                 if ((vx<(max_density)).AND.(vx>0)) then
-                   if ((vy<(max_density/2)).AND.(vy>0)) then
-                      if ((vz<(max_density/2)).AND.(vz>0)) then
+                   if ((vy<(max_density)).AND.(vy>0)) then
+                      if ((vz<(max_density)).AND.(vz>0)) then
                               density_cat(icat, vx,vy,vz) = density_cat(icat, vx,vy,vz)+1.0_dp
                        endif
                    endif
