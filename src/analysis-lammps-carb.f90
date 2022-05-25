@@ -168,6 +168,8 @@ program analysis
   allocate(density_cat(3, max_density, max_density, max_density))
   allocate(config_carb(natoms/6, 4, 3))
   allocate(printing_density(ceiling(max_density*max_density*max_density/(6.0)),6))
+  density_cat = 0.0D0
+  printing_density = 0.0D0
 
 !                  %----------------%
 !                  |  CREATE TOOLS  |
@@ -391,7 +393,7 @@ program analysis
         write(23,'(i5,4F12.6)') max_density, 0.0, dr_dens, 0.0 
         write(23,'(i5,4F12.6)') max_density, 0.0, 0.0, dr_dens
         write(23,'(i5,4F12.6)') 12, 0.0, limit_dens/2, limit_dens/2, limit_dens/2
-        write(23,'(i5,4F12.6)') 8, 0.0, limit_dens/2+1.14, limit_dens/2, limit_dens/2
+        write(23,'(i5,4F12.6)') 8, 0.0, limit_dens/2+rco, limit_dens/2, limit_dens/2
         write(23,'(i5,4F12.6)') 8, 0.0, limit_dens/2+rco*cos(aoco), limit_dens/2+rco*sin(aoco), limit_dens/2
         write(23,'(i5,4F12.6)') 8, 0.0, limit_dens/2+rco*cos(-aoco), limit_dens/2+rco*sin(-aoco), limit_dens/2
         do ix=1,max_density
@@ -403,7 +405,8 @@ program analysis
                    icount=icount+1
                    imod = mod(icount,6)
                    if (imod.eq.0) imod=6
-                   printing_density(icount/6+1,imod)=density_cat(icat,ix,iy,iz)/(nsteps*count_labels(iatm)*(Nmolecule/6))
+                   !printing_density(icount/6+1,imod)=density_cat(icat,ix,iy,iz)/(nsteps*count_labels(iatm)*(Nmolecule/6))
+                   printing_density(icount/6+1,imod)=density_cat(icat,ix,iy,iz)
                 enddo
              enddo
           enddo
