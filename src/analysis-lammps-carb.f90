@@ -392,7 +392,7 @@ program analysis
         write(23,'(i5,4F12.6)') max_density, dr_dens, 0.0, 0.0 
         write(23,'(i5,4F12.6)') max_density, 0.0, dr_dens, 0.0 
         write(23,'(i5,4F12.6)') max_density, 0.0, 0.0, dr_dens
-        write(23,'(i5,4F12.6)') 12, 0.0, limit_dens/2, limit_dens/2, limit_dens/2
+        write(23,'(i5,4F12.6)') 6, 0.0, limit_dens/2, limit_dens/2, limit_dens/2
         write(23,'(i5,4F12.6)') 8, 0.0, limit_dens/2+rco, limit_dens/2, limit_dens/2
         write(23,'(i5,4F12.6)') 8, 0.0, limit_dens/2+rco*cos(aoco), limit_dens/2+rco*sin(aoco), limit_dens/2
         write(23,'(i5,4F12.6)') 8, 0.0, limit_dens/2+rco*cos(-aoco), limit_dens/2+rco*sin(-aoco), limit_dens/2
@@ -461,9 +461,9 @@ CONTAINS
              if (selection(iat1)) then
                 vector=configuration(:,iat1)-config_carb(icarb, 1,:)
                 if (my_usepbc) vector=minimum_image(vector, box)
-                vx = (floor(dot(x,vector)/dr)) + floor(max_density/2.0)
-                vy = (floor(dot(y,vector)/dr)) + floor(max_density/2.0) 
-                vz = (floor(dot(z,vector)/dr)) + floor(max_density/2.0)
+                vx = floor((dot(x,vector) + max_density/2.0)/dr) 
+                vy = floor((dot(y,vector) + max_density/2.0)/dr) 
+                vz = floor((dot(z,vector) + max_density/2.0)/dr) 
                 if ((vx<(max_density)).AND.(vx>0)) then
                    if ((vy<(max_density)).AND.(vy>0)) then
                       if ((vz<(max_density)).AND.(vz>0)) then
