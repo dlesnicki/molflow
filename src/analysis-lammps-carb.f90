@@ -81,6 +81,7 @@ program analysis
   real(kind=dp), dimension(:,:), allocatable :: printing_density
   integer :: max_density, icat, ix, iy, iz, icarb, icount, imod
   real(kind=dp) :: limit_dens, dr_dens, rco, aoco 
+  real(kind=dp) :: bohr_radius 
 
 !                  %----------------%
 !                  |  READ INPUTS   |
@@ -166,7 +167,7 @@ program analysis
   max_density=floor(limit_dens/dr_dens)
   print*, max_density
   allocate(density_cat(3, max_density, max_density, max_density))
-  allocate(config_carb(natoms/6, 4, 3))
+  allocate(config_carb(ceiling(natoms/6.0), 4, 3))
   allocate(printing_density(ceiling(max_density*max_density*max_density/(6.0)),6))
   density_cat = 0.0D0
   printing_density = 0.0D0
@@ -175,9 +176,12 @@ program analysis
 !                  |  CREATE TOOLS  |
 !                  %----------------%
 
+  bohr_radius = 0.529177210671212d0
   rco=1.14
   aoco=2*pi/3
   selectionT= .false.
+  selection_carb=.false.
+  selection_mol=.false.
   do iatm=1,5
      do iatm2=iatm,5
         call create_gofr(gofr(iatm,iatm2),limit=limit,dr=dr)
@@ -334,7 +338,8 @@ program analysis
 
         do iatm=3,5
            icat=iatm-2
-           call density_3D(icat, max_density, density_cat, configuration,config_carb, selection_carb(iatm,:), box, usepbc, dr_dens)
+           call density_3D(icat, max_density, density_cat, configuration,config_carb, selection_carb(iatm,:), box, usepbc, &
+           dr_dens, limit_dens)
         enddo
 
         traj_com(:,:,bin)=com
@@ -388,14 +393,19 @@ program analysis
         open(unit=23,file="dens-cat-"//trim(list_labels(iatm))//".cube")
         write(23,*) "CUBE FILE FOR "//trim(list_labels(iatm))//" AROUND CARBONATE"
         write(23,*) "OUTER LOOP: X, MIDDLE LOOP: Y, INNER LOOP: Z"
-        write(23,'(i5,4F12.6)') 4, 0.0, 0.0, 0.0 
-        write(23,'(i5,4F12.6)') max_density, dr_dens, 0.0, 0.0 
-        write(23,'(i5,4F12.6)') max_density, 0.0, dr_dens, 0.0 
-        write(23,'(i5,4F12.6)') max_density, 0.0, 0.0, dr_dens
-        write(23,'(i5,4F12.6)') 6, 0.0, limit_dens/2, limit_dens/2, limit_dens/2
-        write(23,'(i5,4F12.6)') 8, 0.0, limit_dens/2+rco, limit_dens/2, limit_dens/2
-        write(23,'(i5,4F12.6)') 8, 0.0, limit_dens/2+rco*cos(aoco), limit_dens/2+rco*sin(aoco), limit_dens/2
-        write(23,'(i5,4F12.6)') 8, 0.0, limit_dens/2+rco*cos(-aoco), limit_dens/2+rco*sin(-aoco), limit_dens/2
+        write(23,'(i5,4F12.6)') 4, 0.0, 0.0, 0.0
+       print*, dr_dens, bohr_radius, dr_dens/bohr_radius 
+        write(23,'(i5,4F12.6)') max_density, dr_dens/bohr_radius, 0.0, 0.0 
+        write(23,'(i5,4F12.6)') max_density, 0.0, dr_dens/bohr_radius, 0.0 
+        write(23,'(i5,4F12.6)') max_density, 0.0, 0.0, dr_dens/bohr_radius
+        write(23,'(i5,4F12.6)') 6, 0.0, (limit_dens/2)/bohr_radius, (limit_dens/2)/bohr_radius,  &
+                (limit_dens/2)/bohr_radius
+        write(23,'(i5,4F12.6)') 8, 0.0, (limit_dens/2+rco)/bohr_radius, (limit_dens/2)/bohr_radius, &
+                (limit_dens/2)/bohr_radius
+        write(23,'(i5,4F12.6)') 8, 0.0, (limit_dens/2+rco*cos(aoco))/bohr_radius, &
+                (limit_dens/2+rco*sin(aoco))/bohr_radius, (limit_dens/2)/bohr_radius
+        write(23,'(i5,4F12.6)') 8, 0.0, (limit_dens/2+rco*cos(-aoco))/bohr_radius, &
+                (limit_dens/2+rco*sin(-aoco))/bohr_radius, (limit_dens/2)/bohr_radius
         do ix=1,max_density
              !x = (dble(ix)-0.5_dp)*dr_dens
              do iy=1,max_density
@@ -429,7 +439,7 @@ program analysis
 
 CONTAINS
  
-  subroutine density_3D(icat, max_density, density_cat, configuration,config_carb, selection, box, usepbc, dr)
+  subroutine density_3D(icat, max_density, density_cat, configuration,config_carb, selection, box, usepbc, dr, limit_dens)
     integer, intent(in) :: icat
     integer, intent(in) :: max_density
     real(kind=dp), dimension(:,:,:,:), intent(inout) :: density_cat
@@ -438,7 +448,7 @@ CONTAINS
     logical, dimension(:), intent(in) :: selection
     type(box_type), intent(in) :: box
     logical, intent(in), optional :: usepbc
-    real(kind=dp), intent(in) :: dr
+    real(kind=dp), intent(in) :: dr, limit_dens
 
     integer :: natoms, icarb,  intra, iat1
     real(kind=dp), dimension(3) :: x, y, z, vector
@@ -461,9 +471,9 @@ CONTAINS
              if (selection(iat1)) then
                 vector=configuration(:,iat1)-config_carb(icarb, 1,:)
                 if (my_usepbc) vector=minimum_image(vector, box)
-                vx = floor((dot(x,vector) + max_density/2.0)/dr) 
-                vy = floor((dot(y,vector) + max_density/2.0)/dr) 
-                vz = floor((dot(z,vector) + max_density/2.0)/dr) 
+                vx = floor((dot(x,vector) + limit_dens/2.0)/dr) 
+                vy = floor((dot(y,vector) + limit_dens/2.0)/dr) 
+                vz = floor((dot(z,vector) + limit_dens/2.0)/dr)
                 if ((vx<(max_density)).AND.(vx>0)) then
                    if ((vy<(max_density)).AND.(vy>0)) then
                       if ((vz<(max_density)).AND.(vz>0)) then
