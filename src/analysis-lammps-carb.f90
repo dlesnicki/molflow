@@ -41,7 +41,7 @@ program analysis
   logical :: usepbc=.true.  
   logical :: referential ! if T then particle frame otherwise lab frame
   integer, dimension(:), allocatable :: id_type
-  integer :: bin,step,nsteps,skip,nskips,nprint,iatm,iatm2, imol
+  integer :: bin,step,nstep,mynstep,skip,nskips,nprint,iatm,iatm2, imol
   integer :: iostat
   type(lammpsfile) :: trajfile_lammps
   integer :: i,j
@@ -83,15 +83,21 @@ program analysis
   real(kind=dp) :: limit_dens, dr_dens, rco, aoco 
   real(kind=dp) :: bohr_radius 
 
+  !NCOORD
+  integer, dimension(:,:,:), allocatable :: ncoord_list
+  real(kind=dp), dimension(3) :: rcoord
+  integer :: iat
+
 !                  %----------------%
 !                  |  READ INPUTS   |
 !                  %----------------%
 
-  namelist /data/ directory,filename,nskips,nprint,referential
+  namelist /data/ directory,filename,nskips,nprint,nstep,referential
   namelist /lammps/ orga
   namelist /rdf/ limit,dr
   namelist /density/ limit_dens,dr_dens
   namelist /msd_info/ nbins,dt
+  namelist /ncoord_info/ rcoord
  
   
   read(5,data)
@@ -99,6 +105,7 @@ program analysis
   read(5,rdf)
   read(5,density)
   read(5,msd_info)
+  read(5,ncoord_info)
   !read(5,conductivity_info)
 
 
@@ -107,6 +114,7 @@ program analysis
   write(*,*) "file positions =",trim(filename)
   write(*,*) "nskips =",nskips
   write(*,*) "nprint =",nprint
+  write(*,*) "nstep =",nstep
   write(*,*) "LAMMPS INPUT :"
   write(*,*) "orga =", orga
   write(*,*) "RDF INPUT :"
@@ -119,6 +127,8 @@ program analysis
   write(*,*) "MSD INPUT :"
   write(*,*) "nbins =",nbins
   write(*,*) "dt =",dt
+  write(*,*) "NCOORD INPUT :"
+  write(*,*) "Ncoord for Li, Na, K:", rcoord
   write(*,*) "---------------------"
 
   trajunit=10
@@ -171,6 +181,7 @@ program analysis
   allocate(printing_density(ceiling(max_density*max_density*max_density/(6.0)),6))
   density_cat = 0.0D0
   printing_density = 0.0D0
+  allocate(ncoord_list(3, nstep,3))
 
 !                  %----------------%
 !                  |  CREATE TOOLS  |
@@ -340,6 +351,7 @@ program analysis
            icat=iatm-2
            call density_3D(icat, max_density, density_cat, configuration,config_carb, selection_carb(iatm,:), box, usepbc, &
            dr_dens, limit_dens)
+   ncoord_list(icat,step,:) = ncoord(icat,  configuration, config_carb, rcoord(icat), selection_carb(iatm,:), box, usepbc)
         enddo
 
         traj_com(:,:,bin)=com
@@ -347,9 +359,9 @@ program analysis
      if (mod(step,nprint)==0) write(*,*) "step = ",step
   end do
 
-  nsteps=step
+  mynstep=step
 
-  write(*,*) "nsteps =",nsteps
+  write(*,*) "nstep =", nstep, "mynstep =", mynstep
 
   call close_read_lammps(trajfile_lammps)
 !                  %----------------%
@@ -424,6 +436,14 @@ program analysis
              write(23,'(6E14.6)') printing_density(ix,:)
           enddo
         close(unit=23)
+
+        open(unit=33,file='ncoord-cat-'//trim(list_labels(iatm))//'.dat')
+        do step=nskips,nstep
+           do iat=1,3
+              write(33,*) ncoord_list(icat,step,iat)
+           enddo
+        enddo
+        close(33)
      endif
   enddo
   do imol=1,4
@@ -439,6 +459,42 @@ program analysis
 
 CONTAINS
  
+        function ncoord(icat,  configuration, config_carb, rcoord, selection, box, usepbc)
+    integer, dimension(3) :: ncoord
+    integer :: icat
+    real(kind=dp), dimension(:,:), intent(in) :: configuration
+    real(kind=dp), dimension(:,:,:), intent(in) :: config_carb
+    real(kind=dp), intent(in) :: rcoord
+    type(box_type), intent(in) :: box
+    logical, dimension(:), intent(in) :: selection
+    logical, intent(in), optional :: usepbc
+
+    integer :: natoms, icarb,  intra, iat1, natom
+    real(kind=dp), dimension(3) :: vector
+    real(kind=dp) :: dist 
+    logical :: my_usepbc
+
+    natoms=size(configuration(1,:))
+    ncoord = 0
+    if (present(usepbc)) my_usepbc=usepbc
+    do icarb=1,size(config_carb(:,1,1))
+       do intra=2,4
+          natom=0
+          do iat1=1, natoms
+             if (selection(iat1)) then
+                vector=configuration(:,iat1)-config_carb(icarb, mod(intra+2,3)+2,:)
+                if (my_usepbc) vector=minimum_image(vector, box)
+                dist=norm(vector)
+                if (dist.le.rcoord) then
+                        natom = natom + 1
+                endif
+             endif
+          enddo
+          ncoord(intra-1) = natom
+       enddo
+    enddo           
+  end function ncoord
+
   subroutine density_3D(icat, max_density, density_cat, configuration,config_carb, selection, box, usepbc, dr, limit_dens)
     integer, intent(in) :: icat
     integer, intent(in) :: max_density
